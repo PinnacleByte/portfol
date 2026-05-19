@@ -120,9 +120,9 @@ export default function ProcessTimelineSection({ scrollPanelRef }: ProcessTimeli
       id="process"
       ref={(el) => {
         if (el) {
-          sectionRef.current = el;
+          sectionRef.current = el as unknown as HTMLDivElement;
           if (scrollPanelRef) {
-            scrollPanelRef.current = el;
+            scrollPanelRef.current = el as unknown as HTMLDivElement;
           }
         }
       }}
