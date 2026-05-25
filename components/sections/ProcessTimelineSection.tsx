@@ -55,13 +55,13 @@ export default function ProcessTimelineSection({ scrollPanelRef }: ProcessTimeli
     const cards = timeline.querySelectorAll('.timeline-card');
     const progressLine = timeline.querySelector('.progress-line') as HTMLElement;
 
-    // Use the section as scroller for snap-scroll mode, or window for regular scroll
-    const scroller = section;
+    // Desktop snap-scroll: section is the scroller. Mobile: window scrolls naturally.
+    const isDesktop = window.matchMedia('(min-width: 768px)').matches;
+    const scroller = isDesktop ? section : window;
 
-    // Set GSAP defaults for this scroller
     ScrollTrigger.defaults({ scroller });
 
-    cards.forEach((card, index) => {
+    cards.forEach((card) => {
       gsap.fromTo(
         card,
         { opacity: 0, y: 60, scale: 0.9 },
@@ -126,8 +126,7 @@ export default function ProcessTimelineSection({ scrollPanelRef }: ProcessTimeli
           }
         }
       }}
-      style={{ overflowY: 'auto', height: '100dvh' }}
-      className="relative bg-bg-dark"
+      className="relative bg-bg-dark md:h-[100dvh] md:overflow-y-auto"
     >
       {/* Sticky dot grid — stays in view while timeline content scrolls */}
       <div

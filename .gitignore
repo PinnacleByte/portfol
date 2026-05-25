@@ -3,3 +3,6 @@ node_modules/
 out/
 .DS_Store
 .env*
+
+# Local mobile-audit harness — Playwright scripts + ~22MB of screenshots, not for the repo
+audit-screenshots/

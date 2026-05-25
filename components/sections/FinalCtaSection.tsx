@@ -6,7 +6,7 @@ import NetworkCanvas from '@/components/ui/NetworkCanvas';
 
 export default function FinalCtaSection() {
   return (
-    <section id="contact" className="relative bg-bg-dark flex flex-col h-full overflow-hidden">
+    <section id="contact" className="relative bg-bg-dark flex flex-col min-h-[100dvh] md:h-full overflow-hidden">
 
       <NetworkCanvas />
 
@@ -60,8 +60,8 @@ export default function FinalCtaSection() {
         </motion.div>
       </div>
 
-      {/* Minimal footer bar */}
-      <div className="relative z-10 border-t border-neutral-800 py-5 px-6 shrink-0">
+      {/* Minimal footer bar — desktop only; mobile uses the dedicated Footer.tsx rendered after sections */}
+      <div className="hidden md:block relative z-10 border-t border-neutral-800 py-5 px-6 shrink-0">
         <div className="container flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-primary-400">
           <p>© 2026 PinnacleByte. All rights reserved.</p>
           <a

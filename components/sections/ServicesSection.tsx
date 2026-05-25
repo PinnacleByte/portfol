@@ -64,7 +64,7 @@ function TechIcon({ name, isCustom, variant }: { name: string; isCustom?: boolea
 
 export default function ServicesSection() {
   return (
-    <section id="about" className="relative flex flex-col justify-center bg-bg-dark h-full overflow-hidden">
+    <section id="about" className="relative flex flex-col justify-center bg-bg-dark min-h-[100dvh] md:h-full overflow-hidden scroll-mt-16 py-20 md:py-0">
 
       <DotGridBackground />
 
@@ -88,7 +88,7 @@ export default function ServicesSection() {
           </motion.p>
 
           {/* H2 — word by word */}
-          <h2 className="text-5xl md:text-6xl font-bold text-primary-50 leading-[1.1] mb-6">
+          <h2 className="text-4xl sm:text-5xl md:text-6xl font-bold text-primary-50 leading-[1.1] mb-6">
             {H2_WORDS.map((word, i) => (
               <motion.span
                 key={i}
@@ -151,7 +151,7 @@ export default function ServicesSection() {
                       delay: 0.6 + groupIndex * 0.1 + itemIndex * 0.055,
                     }}
                   >
-                    <div className="transition-transform duration-300 group-hover:scale-110 group-hover:drop-shadow-[0_0_14px_rgba(59,130,246,0.5)]">
+                    <div className="bg-neutral-900/50 border border-neutral-800/70 rounded-2xl p-3 transition-transform duration-300 group-hover:scale-110 group-hover:border-accent-500/40 group-hover:drop-shadow-[0_0_14px_rgba(59,130,246,0.5)]">
                       <TechIcon name={tech.icon} isCustom={tech.custom} variant={tech.variant} />
                     </div>
                     <span className="text-xs text-primary-400 group-hover:text-accent-400 transition-colors duration-300">

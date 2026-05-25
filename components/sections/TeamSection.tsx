@@ -8,7 +8,7 @@ import { team } from '@/data/team';
 
 export default function TeamSection() {
   return (
-    <section id="team" className="relative flex flex-col justify-center bg-bg-dark h-full overflow-hidden px-4 sm:px-6 lg:px-8">
+    <section id="team" className="relative flex flex-col justify-center bg-bg-dark min-h-[100dvh] md:h-full overflow-hidden px-4 sm:px-6 lg:px-8">
       <AuroraBackground />
       <div className="container py-20 md:py-28">
         <SectionHeading

@@ -42,7 +42,7 @@ export default function IntroSplashSection() {
   return (
     <section
       id="intro"
-      className="relative bg-bg-dark flex flex-col items-center justify-center h-full overflow-hidden"
+      className="relative bg-bg-dark flex flex-col items-center justify-center min-h-[100dvh] md:h-full overflow-hidden"
     >
       <NetworkCanvas
         particleCount={100}

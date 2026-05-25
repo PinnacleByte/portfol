@@ -16,15 +16,14 @@ export default function PortfolioSection({ scrollPanelRef }: PortfolioSectionPro
     <section
       id="work"
       ref={scrollPanelRef}
-      style={{ height: '100dvh', overflowY: 'auto' }}
-      className="bg-bg-dark relative"
+      className="bg-bg-dark relative md:h-[100dvh] md:overflow-y-auto"
     >
-      {/* Sticky header */}
-      <div className="sticky top-0 z-10 bg-bg-dark/90 backdrop-blur-sm pt-16 pb-6 px-6 lg:px-16">
+      {/* Sticky header — clears the fixed 57px navbar on mobile */}
+      <div className="sticky top-[57px] md:top-0 z-10 bg-bg-dark/90 backdrop-blur-sm pt-16 pb-6 px-6 lg:px-16">
         <p className="text-xs font-semibold tracking-widest text-accent-400 uppercase mb-3">
           Our Work
         </p>
-        <h2 className="text-3xl lg:text-4xl font-black text-primary-50">
+        <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black text-primary-50 text-balance">
           Projects we&apos;re proud of
         </h2>
       </div>
