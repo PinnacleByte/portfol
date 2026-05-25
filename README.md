@@ -149,6 +149,22 @@ useSnapScroll({
 
 `SnapScrollContainer` sets `overflow: auto` on panels at indices `[3, 4]` and `overflow: hidden` on all others.
 
+## Mobile vs Desktop Layout
+
+The breakpoint is `min-width: 768px`. Above it, the snap-scroll deck runs; below it, sections stack and the page scrolls normally.
+
+| Concern | Desktop (≥ 768px) | Mobile (< 768px) |
+|---------|-------------------|-------------------|
+| Layout | SnapScrollContainer translates a stack of `100dvh` panels | Plain stacked sections inside `<main>` |
+| Section height | `h-full` resolves to 100dvh (panels supply the height) | `min-h-[100dvh]` so each section is at least one viewport tall and can grow |
+| Process & Portfolio scroll | Internally scrollable (`md:h-[100dvh] md:overflow-y-auto`) | Natural flow — no internal scroller |
+| GSAP scroller (ProcessTimeline) | Section element | `window` |
+| Sticky headers | `top-0` of the section's scroll container | `top-[57px]` to clear the fixed navbar |
+| Testimonials marquee card width | 384px | 320px (sm) / 280px (base); `scrollDistance` recomputed on resize |
+| Lenis smooth scroll | Disabled | Enabled |
+| Navbar nav | `<button>` calling `goTo(index)` | `<a href="#id">` anchor links |
+| Footer | Embedded minimal bar inside FinalCtaSection (panel 7) | Separate `<Footer />` after sections; CTA's embedded bar is `hidden md:block` so it doesn't double up |
+
 ## Animated Backgrounds
 
 **Dot Grid Pulse** (`DotGridBackground.tsx`)
@@ -188,6 +204,8 @@ From [tech-stack-icons](https://www.tech-stack-icons.com/) npm package (v3.7.1, 
 - **Design & Tools** (2): Figma, Git
 
 Next.js and Express use `dark` variant. Shopify uses a custom SVG (`/public/icons/shopify.svg`).
+
+Each icon is wrapped in a uniform tile (`bg-neutral-900/50 border border-neutral-800/70 rounded-2xl p-3`) so low-contrast brand icons (cyan Tailwind, blue CSS3, blue Docker) read clearly against the navy background.
 
 ## Colour Tokens (Dark Theme)
 

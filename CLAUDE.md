@@ -8,13 +8,14 @@
 
 ✅ **Intro Splash Section** — NetworkCanvas bg, one-shot typewriter, navbar hidden on section 0  
 ✅ **Hero Section** — 120-particle NetworkCanvas, rotating typewriter eyebrow, two-column layout  
-✅ **Services Section** — Tech icon grid (real brand icons), dot grid background  
-✅ **Process Timeline** — GSAP ScrollTrigger, 7 steps, internally scrollable, sticky dot grid  
-✅ **Portfolio Section** — 3-column card grid, internally scrollable (replaced carousel)  
+✅ **Services Section** — Tech icon grid (real brand icons w/ tile background), dot grid background  
+✅ **Process Timeline** — GSAP ScrollTrigger, 7 steps, internally scrollable on desktop / natural flow on mobile, sticky dot grid  
+✅ **Portfolio Section** — 3-column card grid, internally scrollable on desktop / natural flow on mobile  
 ✅ **Team Section** — Aurora blobs, data from `data/team.ts` → `data/db/team.json`  
-✅ **Testimonials Section** — Marquee, aurora blobs, data from `data/testimonials.ts` → `data/db/testimonials.json`  
+✅ **Testimonials Section** — Marquee with responsive card widths, aurora blobs, data from `data/testimonials.ts` → `data/db/testimonials.json`  
 ✅ **Final CTA Section** — Full-bleed, 60-particle NetworkCanvas, embedded footer  
-✅ **Full-Page Snap Scroll** — Desktop-only, 700ms transition, internal scroll for sections 3 & 4  
+✅ **Full-Page Snap Scroll** — Desktop-only (`min-width: 768px`), 700ms transition, internal scroll for sections 3 & 4  
+✅ **Mobile Responsive Layout** — All sections use `min-h-[100dvh] md:h-full`; sections 3 & 4 drop internal-scroll on mobile and flow naturally  
 ✅ **Admin Dashboard** — `/admin`, password gate, full CRUD for projects / testimonials / team  
 ✅ **Data Layer** — All content in `data/db/*.json`, server actions write via `lib/db.ts`  
 
@@ -114,18 +115,26 @@ All `'use client'`:
 - Navbar hidden while on this section (`visible={currentIndex > 0}` from page.tsx)
 
 ### PortfolioSection.tsx ⭐ (section 4)
-- **Same pattern as ProcessTimelineSection**: `<section id="work" ref={scrollPanelRef} style={{ height: '100dvh', overflowY: 'auto' }}>`
-- Sticky header: `sticky top-0 z-10 bg-bg-dark/90 backdrop-blur-sm`
+- **Same pattern as ProcessTimelineSection**: `<section id="work" ref={scrollPanelRef} className="bg-bg-dark relative md:h-[100dvh] md:overflow-y-auto">`
+- Internal scroll is **desktop-only** (`md:` prefix) — mobile grows naturally with content
+- Sticky header: `sticky top-[57px] md:top-0 z-10 bg-bg-dark/90 backdrop-blur-sm` — `top-[57px]` clears the fixed navbar on mobile
+- H2: `text-2xl sm:text-3xl lg:text-4xl text-balance` so mobile doesn't orphan "of"
 - Grid: `grid-cols-1 md:grid-cols-2 lg:grid-cols-3`, sorted by `project.order`
 - Card: image area (`aspect-video`, placeholder shows 01/02/03 if no image), category badge, title, summary (`line-clamp-2`), tech pills, "View case study →"
 - Animations: `whileInView once:true`, stagger `(index % 3) * 0.12`
 - Data: `import { projects } from '@/data/projects'`
 
 ### ProcessTimelineSection.tsx ⭐⭐
-- Uses GSAP ScrollTrigger with `scroller = sectionRef.current`
-- `scrollPanelRef` prop — section element IS the scroller (`height: 100dvh, overflow-y: auto`)
-- `paddingBottom: '50vh'` on inner container so last step scrolls into view
-- Sticky dot grid: `sticky top-0 h-[100dvh]` + `marginBottom: -100dvh`
+- Uses GSAP ScrollTrigger; **scroller is breakpoint-aware**:
+  ```typescript
+  const isDesktop = window.matchMedia('(min-width: 768px)').matches;
+  const scroller = isDesktop ? sectionRef.current : window;
+  ```
+  On desktop the section is the internal scroller; on mobile the section flows naturally and GSAP listens to window scroll.
+- Section className: `md:h-[100dvh] md:overflow-y-auto` (inline style removed) — internal scroll is desktop-only
+- `scrollPanelRef` prop — passed through so `useSnapScroll`'s edge-detection still sees the section as the scroll target on desktop
+- `paddingBottom: '50vh'` on inner container so last step scrolls into view (creates ~400px dead space on mobile — known minor issue)
+- Sticky dot grid: `sticky top-0 h-[100dvh]` + `marginBottom: -100dvh` (works on both window scroll and section scroll)
 - **Critical cleanup**: `ScrollTrigger.getAll().forEach(t => t.kill())` + `ScrollTrigger.defaults({ scroller: undefined })` in `useEffect` return
 
 ### SnapScrollContainer.tsx ⭐⭐
@@ -167,7 +176,16 @@ const sections = [/* single array used for both mobile and desktop */];
 ### ServicesSection.tsx
 - Tech items defined in `groups` array inside the file (not from `data/db`)
 - `TechIcon` wrapper handles both StackIcon (npm) and custom SVGs
+- Icons wrapped in a uniform tile: `bg-neutral-900/50 border border-neutral-800/70 rounded-2xl p-3` — gives dim brand icons (Tailwind cyan, CSS3 blue, Docker blue) a contrasting backdrop on the navy bg
 - 15 technologies across 3 groups with flanking `1px` horizontal rules
+- Section uses `scroll-mt-16 py-20 md:py-0` so anchor scrolls clear the fixed navbar and content has breathing room on mobile
+- H2: `text-4xl sm:text-5xl md:text-6xl` — smaller on narrow screens so "Technologies & Tools." fits without ugly wrap
+
+### TestimonialsSection.tsx
+- Card width is **responsive** via `useEffect` + resize listener: 280px (<640), 320px (640–767), 384px (≥768)
+- `scrollDistance` recomputed from current `cardWidth` so the infinite-loop seam stays clean across breakpoints: `-(testimonials.length * (cardWidth + 24))`
+- Card padding: `p-6 md:p-8` (narrower on mobile to give the smaller cards proportional spacing)
+- Marquee wrapper has `overflow-hidden`; aurora blob background
 
 ### NetworkCanvas.tsx ⭐ (reusable)
 Configurable props: `particleCount` (60), `connectionRadius` (155), `particleSize` (1.5), `particleAlpha` (0.3), `lineAlpha` (0.18), `speed` (0.45)
@@ -273,7 +291,12 @@ public/icons/shopify.svg                             # Custom Shopify icon
 | 6 | TestimonialsSection | hidden | |
 | 7 | FinalCtaSection | hidden | Embedded footer bar |
 
-**Mobile Fallback**: Normal vertical scroll, Lenis smooth scrolling, `Footer.tsx` visible, all snap hooks disabled.
+**Mobile Fallback** (`< 768px`): Normal vertical scroll, Lenis smooth scrolling, `Footer.tsx` visible, all snap hooks disabled. Section sizing & internal-scroll quirks:
+
+- **All sections use `min-h-[100dvh] md:h-full`** — on desktop they live inside SnapScrollContainer's `100dvh` panels (so `h-full` resolves to 100dvh). On mobile they have no defined parent height, so `min-h-[100dvh]` ensures each section is at least one viewport tall and can grow with content.
+- **Sections 3 & 4 drop internal-scroll on mobile**: their `100dvh + overflow-y: auto` is gated behind `md:` so on mobile they flow naturally (otherwise users would only see one timeline step or one portfolio card with no indication to scroll inside).
+- **ProcessTimelineSection GSAP** picks scroller by breakpoint: `isDesktop ? section : window`. Desktop = section is the scroller; mobile = window scrolls naturally and GSAP listens to it.
+- **Sticky headers** that should sit below the fixed navbar on mobile use `sticky top-[57px] md:top-0` (PortfolioSection's "Our Work" header).
 
 ## Known Issues & Fixes
 
@@ -292,6 +315,15 @@ public/icons/shopify.svg                             # Custom Shopify icon
 | `<Image>` crash on invalid src | `PortfolioSection` guards src: only renders `<Image>` if path starts with `/` or `https://`. Bad paths fall back to numbered placeholder |
 | Project image not showing | File must be in `public/images/`. Dashboard Image URL must start with `/` (e.g. `/images/burger.png`) or be a full `https://` URL |
 | Admin writes don't persist on Vercel | Vercel filesystem is read-only. `fs.writeFile` works locally but not in production. Fix: edit JSON files + redeploy, or migrate to a database |
+| Splash compressed to top on mobile / sections overlap | Sections used bare `h-full` but mobile `<main>` had no defined height → `h-full` resolved to `auto` and sections shrink-wrapped. Fix: `min-h-[100dvh] md:h-full` on Intro/Services/Team/Testimonials/CTA |
+| Only one Process step / one Portfolio card visible on mobile | Sections had inline `style={{ height: '100dvh', overflowY: 'auto' }}` creating a viewport-sized internal scroller. Fix: replace inline style with `md:h-[100dvh] md:overflow-y-auto` class so mobile uses natural flow |
+| Process timeline GSAP cards never appear on mobile | GSAP `scroller` was hardcoded to `sectionRef.current`, but on mobile the section is no longer a scroller. Fix: `scroller = isDesktop ? section : window` |
+| Testimonial cards wider than viewport on mobile (cut off) | Hardcoded `w-96` (384px) > 360/412 viewport. Fix: responsive card width via state, `scrollDistance` recomputed from current width |
+| Sticky section headers covered by fixed navbar on mobile | PortfolioSection's sticky header stuck to `top: 0` which is the navbar's territory on mobile. Fix: `sticky top-[57px] md:top-0` |
+| Tech icon brand colors blend into dark bg | Brand colors (Tailwind cyan, CSS3 blue, Docker blue) have low contrast on navy and the lib's `dark`/`grayscale` variants don't help. Fix: wrap each icon in a `bg-neutral-900/50 border` tile so all icons have uniform tile backdrop |
+| Services H2 "Technologies & Tools." overflows narrow viewports | `text-5xl` (48px) too big at 360/412. Fix: `text-4xl sm:text-5xl md:text-6xl` |
+| Portfolio H2 orphan "of" wrap at 360 | "Projects we're proud of" wraps as "Projects we're proud / of". Fix: `text-2xl sm:text-3xl lg:text-4xl text-balance` |
+| Two footers stacked on mobile | FinalCtaSection's embedded "minimal footer bar" rendered on mobile in addition to the dedicated `<Footer />` from `app/page.tsx`. Fix: `hidden md:block` on the embedded bar — desktop snap panel keeps it, mobile shows only the proper Footer.tsx |
 
 ## Animation Guidelines
 
@@ -308,7 +340,8 @@ public/icons/shopify.svg                             # Custom Shopify icon
 
 **Real brand icons** from [tech-stack-icons](https://www.tech-stack-icons.com/) npm package (MIT, v3.7.1).
 - `TechIcon` wrapper handles both StackIcon and custom SVGs
-- Variants: `light` (default), `dark` (Next.js, Express), `grayscale`
+- Variants: `light` (default), `dark` (Next.js, Express), `grayscale` — note: the lib's `dark` variant is monochrome only for some logos; for colored brand icons (Tailwind, CSS3, Docker) all variants are still brand colors
+- **Tile background on icon wrapper**: every icon is wrapped in `bg-neutral-900/50 border border-neutral-800/70 rounded-2xl p-3` so low-contrast brand icons (cyan Tailwind, blue CSS3, blue Docker) read clearly against navy
 - Custom: Shopify from `/public/icons/shopify.svg` (Simple Icons format)
 
 ## Installation & Quick Start
@@ -335,7 +368,7 @@ ADMIN_PASSWORD=your-password-here
 
 ---
 
-**Last Updated**: May 2026 (proxy.ts migration, image URL validation, Vercel write caveat)  
+**Last Updated**: May 2026 (mobile responsive pass — section heights, GSAP mobile scroller, responsive testimonial marquee, sticky-header navbar clearance, services title overflow, icon tile backgrounds, portfolio H2 text-balance)  
 **Dark Theme (Navy + Electric Blue)**: ✅  
 **Animated Backgrounds**: ✅ (dot grid, aurora blobs, network canvas)  
 **Full-Page Snap Scroll**: ✅ (sections 3 & 4 internally scrollable via `internalScrollSections[]`)  

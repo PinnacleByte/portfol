@@ -49,6 +49,34 @@ Desktop-only. All sections live in the DOM simultaneously (no mount/unmount). Fr
 
 The trade-off: all section JS runs immediately. This is acceptable for a portfolio with 7 sections.
 
+## Mobile Responsive Strategy
+
+The breakpoint that switches between the snap deck and a stacked page is `min-width: 768px` — Tailwind's `md:` prefix. Below it, every section becomes a normal block that flows in document order.
+
+**Section heights — `min-h-[100dvh] md:h-full`**
+
+On desktop, each section is wrapped in a 100dvh panel inside SnapScrollContainer, so `h-full` resolves correctly. On mobile there is no parent height — `<main>` flows naturally — so a bare `h-full` collapses to content height and sections shrink-wrap. Symptoms: the intro splash compresses to a thin strip; adjacent sections overlap. The fix is two-step: `min-h-[100dvh]` guarantees each mobile section is at least one viewport tall, and `md:h-full` preserves the desktop snap behavior. This pattern applies to every section that previously used a bare `h-full`.
+
+**Sections 3 & 4 drop their internal scroller on mobile**
+
+ProcessTimeline and Portfolio are 100dvh internal scrollers on desktop — the snap-scroll system relies on this to detect edge escapes. On mobile, the same pattern would mean users only ever see one timeline step or one portfolio card before having to discover an internal scroll gesture. So the inline `height: 100dvh; overflow-y: auto` was replaced with `md:h-[100dvh] md:overflow-y-auto` — desktop keeps the internal scroller, mobile flows naturally.
+
+**GSAP scroller selection follows the section**
+
+`ProcessTimelineSection` uses GSAP ScrollTrigger to animate timeline cards in. The scroller has to match whatever is actually scrolling: `isDesktop ? sectionRef.current : window`. Without this swap the cards stay at `opacity: 0` on mobile because GSAP is listening to a non-scrolling element.
+
+**Fixed navbar clearance**
+
+The navbar is `position: fixed` at 57px tall. A mobile-only `<div h-[57px]>` spacer at the top of `<main>` pushes the first section below the bar. For elements that anchor to viewport top after the first section — anchor-link targets, sticky headers — use `scroll-mt-16` (or `sticky top-[57px] md:top-0`) so they clear the navbar.
+
+**Responsive marquee card width**
+
+The testimonials marquee uses fixed-pixel card widths because the seamless infinite-loop translation distance is computed from card width + gap. Card width is responsive (`280 / 320 / 384`) and `scrollDistance` is recomputed via state + resize listener, so the loop seam stays clean across breakpoints.
+
+**Tech icon tile background**
+
+Some brand icons (Tailwind cyan, CSS3 blue, Docker blue) have low contrast against the navy background and the `tech-stack-icons` library's `dark`/`grayscale` variants don't help — they're either the same brand color or a flat gray. Solution: wrap every icon in a uniform `bg-neutral-900/50 border` tile. Treats every icon the same and gives dim ones a contrasting backdrop without per-icon styling.
+
 ## Why next/image for Static Assets
 
 Local PNG/JPG imports via `next/image` give automatic width/height (no layout shift), WebP/AVIF conversion at build time, and lazy loading by default. Hero image uses `priority` to skip lazy loading since it's above the fold.
