@@ -38,7 +38,41 @@
       "Bash(mkdir -p \"f:/ecommerce_portfolio/Portfoliosite/app/admin/team/[id]\")",
       "Bash(npx kill-port *)",
       "Bash(fuser -k 3000/tcp)",
-      "Bash(findstr /C:\"next\" /C:\"react\")"
+      "Bash(findstr /C:\"next\" /C:\"react\")",
+      "Bash(Get-Process -Name \"node\" -ErrorAction SilentlyContinue)",
+      "Bash(Select-Object Id, ProcessName, CPU)",
+      "Bash(pkill -f \"next dev\")",
+      "Bash(pkill -f \"next start\")",
+      "Bash(taskkill /F /IM node.exe)",
+      "Bash(cmd /c \"taskkill /F /IM node.exe\")",
+      "Bash(cmd /c \"taskkill /F /IM node.exe 2>&1\")",
+      "Bash(cmd /c \"taskkill /F /IM node.exe & echo exit_code=%errorlevel%\")",
+      "Bash(cmd /c \"tasklist /FI \\\\\"IMAGENAME eq node.exe\\\\\" 2>&1\")",
+      "Bash(where npx *)",
+      "Bash(where node *)",
+      "Bash(npx playwright *)",
+      "Bash(curl -s -o NUL -w \"%{http_code}\\\\n\" http://localhost:3000)",
+      "Bash(node f:\\\\ecommerce_portfolio\\\\Portfoliosite\\\\audit-screenshots\\\\capture.mjs)",
+      "Bash(node \"f:/ecommerce_portfolio/Portfoliosite/audit-screenshots/capture.mjs\")",
+      "Bash(node \"f:/ecommerce_portfolio/Portfoliosite/audit-screenshots/verify-scroll.mjs\")",
+      "Bash(node -e \"const d=require\\('tech-stack-icons/dist/index.js'\\); console.log\\(Object.keys\\(d.default || d\\)\\);\")",
+      "Bash(node -e \"const fs=require\\('fs'\\);const c=fs.readFileSync\\('node_modules/tech-stack-icons/dist/index.js','utf8'\\); ['tailwindcss','css3','docker'].forEach\\(n=>{const i=c.indexOf\\('\\\\\"'+n+'\\\\\"'\\);console.log\\(n,'@',i,c.slice\\(i,i+200\\)\\);}\\);\")",
+      "Bash(node -e \"const fs=require\\('fs'\\);const c=fs.readFileSync\\('node_modules/tech-stack-icons/dist/index.js','utf8'\\); const i=c.indexOf\\('tailwindcss'\\);console.log\\('found at',i\\);console.log\\(c.substr\\(i-50,500\\)\\);\")",
+      "Bash(node -e \"const fs=require\\('fs'\\);const c=fs.readFileSync\\('node_modules/tech-stack-icons/dist/index.js','utf8'\\); const i=c.indexOf\\('tailwindcss'\\);const slice=c.substr\\(i,3500\\);['light:','dark:','grayscale:'].forEach\\(v=>{const p=slice.indexOf\\(v\\);if\\(p>=0\\){const sub=slice.substr\\(p,150\\).match\\(/fill=\\\\\"[^\\\\\"]+\\\\\"/g\\);console.log\\(v,sub\\);}}\\);\")",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "Bash(mkdir \"f:\\\\ecommerce_portfolio\\\\Portfoliosite\\\\app\\\\studio\\\\[[...tool]]\" 2>&1 || true)",
+      "Bash(mkdir -p \"f:/ecommerce_portfolio/Portfoliosite/app/studio/[[...tool]]\")",
+      "Bash(ls app/admin)",
+      "Bash(ls components/admin)",
+      "Bash(ls actions/)",
+      "Bash(ls proxy.ts)",
+      "Bash(ls lib/db.ts)",
+      "Bash(grep -r \"from '@/data/projects'\" --include=\"*.tsx\" --include=\"*.ts\" -l)"
+    ],
+    "additionalDirectories": [
+      "f:\\ecommerce_portfolio\\Portfoliosite\\app\\studio"
     ]
   }
 }

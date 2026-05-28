@@ -2,14 +2,14 @@
 
 import Image from 'next/image';
 import { motion } from 'framer-motion';
-import { projects } from '@/data/projects';
 import type { Project } from '@/types';
 
 interface PortfolioSectionProps {
   scrollPanelRef?: React.RefObject<HTMLDivElement | null>;
+  projects: Project[];
 }
 
-export default function PortfolioSection({ scrollPanelRef }: PortfolioSectionProps) {
+export default function PortfolioSection({ scrollPanelRef, projects }: PortfolioSectionProps) {
   const sorted = [...projects].sort((a, b) => (a.order ?? 99) - (b.order ?? 99));
 
   return (

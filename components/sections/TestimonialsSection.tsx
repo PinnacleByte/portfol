@@ -4,7 +4,11 @@ import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import SectionHeading from '@/components/ui/SectionHeading';
 import AuroraBackground from '@/components/ui/AuroraBackground';
-import { testimonials } from '@/data/testimonials';
+import type { Testimonial } from '@/types';
+
+interface TestimonialsSectionProps {
+  testimonials: Testimonial[];
+}
 
 const GAP_PX = 24;
 
@@ -14,7 +18,7 @@ function getCardWidth(viewportWidth: number): number {
   return 280;
 }
 
-export default function TestimonialsSection() {
+export default function TestimonialsSection({ testimonials }: TestimonialsSectionProps) {
   const [isMarqueeHovered, setIsMarqueeHovered] = useState(false);
   const [cardWidth, setCardWidth] = useState(384);
 

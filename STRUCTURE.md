@@ -2,7 +2,7 @@
 
 ## Overview
 
-PinnacleByte portfolio — Next.js 16 App Router, React 19, TypeScript, Tailwind CSS, Framer Motion, GSAP, dark Navy + Electric Blue theme.
+PinnacleByte portfolio — Next.js 16 App Router, React 19, TypeScript, Tailwind CSS, Framer Motion, GSAP, dark Navy + Electric Blue theme. Content managed via Sanity v3 (Studio embedded at `/studio`).
 
 ## Directory Breakdown
 
@@ -10,32 +10,26 @@ PinnacleByte portfolio — Next.js 16 App Router, React 19, TypeScript, Tailwind
 
 ```
 app/
-  layout.tsx            # Root layout — LenisProvider wrapper, global metadata
-  page.tsx              # Homepage — snap scroll (desktop) / stacked sections (mobile)
-  contact/page.tsx      # Contact page
+  layout.tsx                    # Root layout — LenisProvider wrapper, global metadata
+  page.tsx                      # Server Component — fetches Sanity data in parallel, renders HomePageClient
+  contact/page.tsx              # Contact page
   work/
-    page.tsx            # All projects gallery
-    [slug]/page.tsx     # Case study detail
-  admin/
-    page.tsx            # Redirects → /admin/projects
-    layout.tsx          # Dashboard shell: sidebar nav + sign out
-    login/page.tsx      # Password gate (useActionState)
-    projects/
-      page.tsx          # List + reorder
-      new/page.tsx      # Add project form
-      [slug]/page.tsx   # Edit project form
-    testimonials/
-      page.tsx / new/page.tsx / [id]/page.tsx
-    team/
-      page.tsx / new/page.tsx / [id]/page.tsx
+    page.tsx                    # All projects gallery (async server component, Sanity fetch)
+    [slug]/page.tsx             # Case study detail (SSG via generateStaticParams from Sanity)
+  studio/
+    [[...tool]]/page.tsx        # Embedded Sanity Studio (dynamic, Sanity auth)
 ```
+
+### `/components/HomePageClient.tsx`
+
+`'use client'` — contains all interactive homepage logic: `useRef`, `useSnapScroll`, the snap container layout, the sections array. Receives `projects`, `testimonials`, `team` as props from the server component `app/page.tsx`.
 
 ### `/components/ui` — Shared Primitives
 
 | File | Purpose |
 |------|---------|
 | `Navbar.tsx` | Fixed top nav. `visible` prop hides it on intro section. Desktop: `goTo()` buttons. Mobile: `<a href="#id">` anchors. |
-| `Footer.tsx` | Mobile-only footer (desktop has embedded footer in FinalCtaSection) |
+| `Footer.tsx` | Mobile-only footer |
 | `Button.tsx` | Configurable button variants |
 | `NetworkCanvas.tsx` | Canvas particle system. Props: `particleCount`, `connectionRadius`, `particleAlpha`, `lineAlpha`, `speed` |
 | `DotGridBackground.tsx` | 18×11 CSS dot grid with outward ripple pulse animation |
@@ -49,47 +43,17 @@ app/
 | `HeroSection.tsx` | 1 — Hero | 120-particle canvas, rotating typewriter eyebrow, word-by-word blur reveal |
 | `ServicesSection.tsx` | 2 — Services | Tech icon grid (tech-stack-icons npm), dot grid background |
 | `ProcessTimelineSection.tsx` | 3 — Timeline | GSAP ScrollTrigger, internally scrollable, sticky dot grid |
-| `PortfolioSection.tsx` | 4 — Portfolio | 3-col card grid, internally scrollable, `<Image>` with path validation |
-| `TeamSection.tsx` | 5 — Team | Aurora background, data from `data/team.ts` |
-| `TestimonialsSection.tsx` | 6 — Testimonials | Marquee, aurora background, data from `data/testimonials.ts` |
+| `PortfolioSection.tsx` | 4 — Portfolio | 3-col card grid, internally scrollable. Receives `projects: Project[]` prop. |
+| `TeamSection.tsx` | 5 — Team | Aurora background. Receives `team: TeamMember[]` prop. |
+| `TestimonialsSection.tsx` | 6 — Testimonials | Marquee, aurora background. Receives `testimonials: Testimonial[]` prop. |
 | `FinalCtaSection.tsx` | 7 — CTA | 60-particle canvas, embedded footer bar |
-
-### `/components/admin` — Dashboard Forms (all `'use client'`)
-
-| File | Purpose |
-|------|---------|
-| `ProjectForm.tsx` | `useActionState` form — title, category, summary, description, tech, image URL, liveUrl, order, featured |
-| `TestimonialForm.tsx` | Quote + author fields |
-| `TeamForm.tsx` | Name, role, description, photo URL |
-| `DeleteButton.tsx` | `useTransition` + `confirm()` — must be a Client Component |
-
-### `/actions` — Server Actions (all `'use server'`)
-
-| File | Exports |
-|------|---------|
-| `auth.ts` | `login`, `logout`, `getSession` |
-| `projects.ts` | `createProject`, `updateProject`, `deleteProject`, `reorderProject` |
-| `testimonials.ts` | `createTestimonial`, `updateTestimonial`, `deleteTestimonial` |
-| `team.ts` | `createTeamMember`, `updateTeamMember`, `deleteTeamMember` |
-
-### `/data` — Content Layer
-
-```
-data/
-  db/
-    projects.json       # Source of truth — written by dashboard server actions
-    testimonials.json   # Source of truth
-    team.json           # Source of truth
-  projects.ts           # Re-exports db/projects.json as typed Project[]
-  testimonials.ts       # Re-exports db/testimonials.json as typed Testimonial[]
-  team.ts               # Re-exports db/team.json as typed TeamMember[]
-```
 
 ### `/lib`
 
 | File | Purpose |
 |------|---------|
-| `db.ts` | Server-only. `readProjects / writeProjects`, `readTestimonials / writeTestimonials`, `readTeam / writeTeam` via `fs/promises` |
+| `sanity.ts` | Sanity client (`createClient`) — `projectId: b3q3iq0h`, `dataset: production`, `useCdn: true` |
+| `sanityFetch.ts` | Typed GROQ fetch helpers: `fetchProjects`, `fetchTestimonials`, `fetchTeam`, `fetchProjectBySlug`, `fetchAllSlugs` |
 | `lenis.ts` | Lenis smooth scroll factory (mobile only) |
 
 ### `/hooks`
@@ -105,39 +69,49 @@ data/
 public/
   icons/
     shopify.svg         # Custom Shopify brand icon (Simple Icons format)
-  images/               # Project images — reference as /images/filename.png in dashboard
+  images/               # Optional local project images (reference as /images/filename.png)
 ```
 
 ### Root files
 
 | File | Purpose |
 |------|---------|
-| `proxy.ts` | Auth guard for all `/admin/*` routes (Next.js 16 convention — replaces `middleware.ts`) |
+| `sanity.config.ts` | Sanity Studio schema — defines `portfolioProject`, `portfolioTestimonial`, `portfolioTeam` document types |
 | `tailwind.config.ts` | Color tokens, glow shadows |
-| `next.config.mjs` | `reactStrictMode: true` |
-| `tsconfig.json` | `moduleResolution: bundler`, `resolveJsonModule: true`, TypeScript 6 |
+| `next.config.mjs` | `cdn.sanity.io` remotePattern for Next.js Image, `reactStrictMode: true` |
+| `tsconfig.json` | `moduleResolution: bundler`, TypeScript 6 |
 
-## Adding Project Images
+## Sanity Data Flow
 
-1. Place the image in `public/images/` (e.g. `public/images/my-project.png`)
-2. In the admin dashboard Image URL field, enter `/images/my-project.png`
-3. External hosted images also work — use the full `https://` URL
-4. Invalid paths (no leading `/`, bare filename) are silently ignored; a numbered placeholder is shown instead
+```
+Sanity Cloud
+  ↓  GROQ  (lib/sanityFetch.ts)
+app/page.tsx  [Server Component — async]
+  ├─ fetchProjects()
+  ├─ fetchTestimonials()
+  └─ fetchTeam()
+  ↓  props
+components/HomePageClient.tsx  ['use client']
+  ├─ PortfolioSection   (projects prop)
+  ├─ TeamSection        (team prop)
+  └─ TestimonialsSection (testimonials prop)
+```
+
+`app/work/[slug]/page.tsx` calls `fetchProjectBySlug(slug)` directly (server component).  
+`generateStaticParams` calls `fetchAllSlugs()` at build time to pre-render case study pages.
 
 ## Deployment (Vercel)
 
-- Public site ✅ — static assets in `public/` are served correctly
-- Admin reads ✅ — JSON files are read at request time
-- Admin writes ❌ — `fs.writeFile` doesn't persist on Vercel's read-only filesystem
-
-**Workaround:** edit `data/db/*.json` locally and redeploy.  
-**Proper fix:** replace `lib/db.ts` with a database (Vercel Postgres, Supabase, etc.) — the server actions and admin UI need no other changes.
+- No environment variables required for public reads (Sanity dataset is public).
+- Deploy and visit `/studio` — sign in with your Sanity account to manage all content.
+- Content is live immediately after saving in Studio (CDN-cached).
+- To regenerate static `/work/[slug]` pages after adding content: redeploy, or enable ISR with `next: { revalidate: 60 }` in `lib/sanityFetch.ts`.
 
 ## Key Styling Conventions
 
 - Background: `bg-bg-dark` (`#0F172A`)
 - Headings: `text-primary-50` (`#F8FAFC`)
 - Body: `text-primary-300` (`#CBD5E1`)
-- Accent: `text-accent-400` / `bg-accent-500` (Electric Blue `#3B82F6` / `#60A5FA`)
+- Accent: `text-accent-400` / `bg-accent-500` (Electric Blue)
 - Cards: `bg-neutral-900` border `border-neutral-700`
 - Section padding: `px-6 lg:px-16`

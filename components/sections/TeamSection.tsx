@@ -4,9 +4,13 @@ import Image from 'next/image';
 import { motion } from 'framer-motion';
 import SectionHeading from '@/components/ui/SectionHeading';
 import AuroraBackground from '@/components/ui/AuroraBackground';
-import { team } from '@/data/team';
+import type { TeamMember } from '@/types';
 
-export default function TeamSection() {
+interface TeamSectionProps {
+  team: TeamMember[];
+}
+
+export default function TeamSection({ team }: TeamSectionProps) {
   return (
     <section id="team" className="relative flex flex-col justify-center bg-bg-dark min-h-[100dvh] md:h-full overflow-hidden px-4 sm:px-6 lg:px-8">
       <AuroraBackground />

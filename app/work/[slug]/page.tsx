@@ -1,18 +1,20 @@
 import { notFound } from 'next/navigation';
-import { projects } from '@/data/projects';
+import { fetchProjectBySlug, fetchAllSlugs } from '@/lib/sanityFetch';
 
 interface WorkCaseStudyProps {
-  params: {
+  params: Promise<{
     slug: string;
-  };
+  }>;
 }
 
-export function generateStaticParams() {
-  return projects.map((project) => ({ slug: project.slug }));
+export async function generateStaticParams() {
+  const slugs = await fetchAllSlugs();
+  return slugs.map((slug) => ({ slug }));
 }
 
-export default function WorkCaseStudyPage({ params }: WorkCaseStudyProps) {
-  const project = projects.find((item) => item.slug === params.slug);
+export default async function WorkCaseStudyPage({ params }: WorkCaseStudyProps) {
+  const { slug } = await params;
+  const project = await fetchProjectBySlug(slug);
 
   if (!project) {
     notFound();

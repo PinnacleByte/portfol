@@ -87,7 +87,23 @@ Local PNG/JPG imports via `next/image` give automatic width/height (no layout sh
 - `components/ui/` — reusable primitives (Button, Navbar, Footer)
 - `components/sections/` — page-specific layout sections
 - `components/image/` — static assets imported directly (e.g. `hero.png`)
-- `public/images/` — project images referenced by URL in the admin dashboard (must start with `/`)
-- `hooks/` — custom hooks (`useSnapScroll`)
-- `lib/` — reserved for shared motion variants and scroll helpers
-- `data/` — reserved for content-driven items (projects, testimonials)
+- `public/images/` — optional local project images (reference as `/images/filename.png`)
+- `hooks/` — custom hooks (`useSnapScroll`, `useTypewriter`)
+- `lib/` — Sanity client + fetch helpers, Lenis factory
+
+## Sanity CMS Migration (May 2026)
+
+The original data layer used local JSON files (`data/db/*.json`) managed by a custom `/admin` dashboard. This was replaced with Sanity v3 for two reasons:
+
+1. **Vercel filesystem is read-only** — `fs.writeFile` does not persist between deploys. The admin dashboard only worked locally, requiring a local edit + GitHub push to publish changes.
+2. **Sanity Studio is purpose-built** — a hosted, authenticated CMS UI with image upload, field validation, and history — better in every dimension than a hand-rolled dashboard.
+
+**What changed:**
+- `data/db/*.json` and `data/*.ts` re-exports deleted; `lib/db.ts` deleted; `actions/*.ts` (CRUD) deleted; `app/admin/` and `components/admin/` deleted; `proxy.ts` deleted.
+- `lib/sanity.ts` (client config) and `lib/sanityFetch.ts` (typed GROQ helpers) added.
+- `sanity.config.ts` (schema for 3 document types) added; `app/studio/[[...tool]]/page.tsx` embeds the Studio at `/studio`.
+- `app/page.tsx` converted from `'use client'` to an `async` server component that fetches data in parallel. Its interactive logic (hooks, snap scroll) was extracted to `components/HomePageClient.tsx` (`'use client'`).
+- `PortfolioSection`, `TeamSection`, `TestimonialsSection`, `SelectedWorkSection` were changed from bundle-time JSON imports to accepting data as props passed from `HomePageClient`.
+
+**Why server component for `app/page.tsx`:**
+Client components cannot be `async`, so data fetching had to be lifted to a server component parent. The server component calls `Promise.all([fetchProjects(), fetchTestimonials(), fetchTeam()])` and passes results as props. This is the standard Next.js App Router pattern for server-fetched + client-interactive pages.

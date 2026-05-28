@@ -1,8 +1,9 @@
 import SectionHeading from '@/components/ui/SectionHeading';
 import WorkGallery from '@/components/work/WorkGallery';
-import { projects } from '@/data/projects';
+import { fetchProjects } from '@/lib/sanityFetch';
 
-export default function WorkPage() {
+export default async function WorkPage() {
+  const projects = await fetchProjects();
   return (
     <main className="container py-20">
       <div className="space-y-6">

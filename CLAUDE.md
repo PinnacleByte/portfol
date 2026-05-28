@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-**PinnacleByte Portfolio** — Premium dark-themed web development studio portfolio using Next.js 16, React 19, TypeScript, Tailwind CSS, Framer Motion, and GSAP. Includes a built-in password-protected admin dashboard for managing projects, testimonials, and team members.
+**PinnacleByte Portfolio** — Premium dark-themed web development studio portfolio using Next.js 16, React 19, TypeScript, Tailwind CSS, Framer Motion, GSAP, and Sanity v3 CMS. Content managed via Sanity Studio embedded at `/studio`.
 
 ## Current Status — May 2026 (updated)
 
@@ -11,77 +11,66 @@
 ✅ **Services Section** — Tech icon grid (real brand icons w/ tile background), dot grid background  
 ✅ **Process Timeline** — GSAP ScrollTrigger, 7 steps, internally scrollable on desktop / natural flow on mobile, sticky dot grid  
 ✅ **Portfolio Section** — 3-column card grid, internally scrollable on desktop / natural flow on mobile  
-✅ **Team Section** — Aurora blobs, data from `data/team.ts` → `data/db/team.json`  
-✅ **Testimonials Section** — Marquee with responsive card widths, aurora blobs, data from `data/testimonials.ts` → `data/db/testimonials.json`  
+✅ **Team Section** — Aurora blobs, data from Sanity (`portfolioTeam`)  
+✅ **Testimonials Section** — Marquee with responsive card widths, aurora blobs, data from Sanity (`portfolioTestimonial`)  
 ✅ **Final CTA Section** — Full-bleed, 60-particle NetworkCanvas, embedded footer  
 ✅ **Full-Page Snap Scroll** — Desktop-only (`min-width: 768px`), 700ms transition, internal scroll for sections 3 & 4  
 ✅ **Mobile Responsive Layout** — All sections use `min-h-[100dvh] md:h-full`; sections 3 & 4 drop internal-scroll on mobile and flow naturally  
-✅ **Admin Dashboard** — `/admin`, password gate, full CRUD for projects / testimonials / team  
-✅ **Data Layer** — All content in `data/db/*.json`, server actions write via `lib/db.ts`  
+✅ **Sanity CMS** — All content in Sanity Cloud (project `b3q3iq0h`, dataset `production`); Studio embedded at `/studio`  
+✅ **Data Layer** — `lib/sanityFetch.ts` GROQ helpers; `app/page.tsx` async server component; sections receive data as props  
 
-## Admin Dashboard Architecture
+## Sanity CMS Architecture
 
 ### Setup
-Add to `.env.local`:
-```
-ADMIN_PASSWORD=your-password-here
-```
-Access at `http://localhost:3000/admin`. `proxy.ts` (Next.js 16 convention, replaces `middleware.ts`) protects all `/admin/*` routes.
+No environment variables required for public reads — the dataset is public.
+
+Content is managed at `http://localhost:3000/studio` (dev) or `https://yoursite.com/studio` (production). Authenticate with your Sanity account (project owner/member).
 
 ### Data Flow
 ```
-data/db/projects.json        ← written by dashboard server actions
-data/db/testimonials.json    ← written by dashboard server actions
-data/db/team.json            ← written by dashboard server actions
-       ↓ (JSON import at bundle time, resolveJsonModule: true)
-data/projects.ts             ← used by public site, /work, /work/[slug]
-data/testimonials.ts         ← used by TestimonialsSection
-data/team.ts                 ← used by TeamSection
+Sanity Cloud (project b3q3iq0h, dataset production)
+  ↓  GROQ queries — lib/sanityFetch.ts
+app/page.tsx  [async Server Component]
+  ├─ fetchProjects()      → projects: Project[]
+  ├─ fetchTestimonials()  → testimonials: Testimonial[]
+  └─ fetchTeam()          → team: TeamMember[]
+  ↓  props
+components/HomePageClient.tsx  ['use client' — hooks, snap scroll]
+  ├─ PortfolioSection    (projects prop)
+  ├─ TeamSection         (team prop)
+  └─ TestimonialsSection (testimonials prop)
 ```
-On Vercel: commit the JSON files and redeploy to publish changes (filesystem resets on deploy).
 
-### Auth
-- `actions/auth.ts` — `login()` checks `process.env.ADMIN_PASSWORD`, sets httpOnly cookie `admin_session` (7-day TTL)
-- `middleware.ts` — redirects unauthenticated `/admin/*` to `/admin/login`; redirects authenticated users away from `/admin/login`
-- `logout()` deletes the cookie and redirects to `/admin/login`
+`/work/[slug]` — `fetchProjectBySlug(slug)` directly in the server component; `generateStaticParams` calls `fetchAllSlugs()` for static pre-rendering.
 
-### Server Actions (`actions/`)
-All `'use server'`:
-- `actions/projects.ts` — `createProject`, `updateProject(slug)`, `deleteProject(slug)`, `reorderProject(slug, direction)`
-- `actions/testimonials.ts` — `createTestimonial`, `updateTestimonial(id)`, `deleteTestimonial(id)`
-- `actions/team.ts` — `createTeamMember`, `updateTeamMember(id)`, `deleteTeamMember(id)`
-
-All write actions call `revalidatePath('/')` then `redirect('/admin/<entity>')` on success.
-
-### lib/db.ts
-Server-only module using `fs/promises`. Exports:
+### lib/sanity.ts
 ```typescript
-readProjects() / writeProjects(data)
-readTestimonials() / writeTestimonials(data)
-readTeam() / writeTeam(data)
-```
-JSON files located at `path.join(process.cwd(), 'data', 'db', '<entity>.json')`.
-
-### Admin Pages
-```
-app/admin/
-  login/page.tsx            # 'use client', useActionState(login)
-  layout.tsx                # Sidebar nav, server component, logout form action
-  page.tsx                  # redirect('/admin/projects')
-  projects/
-    page.tsx                # Server: readProjects(), list with reorder buttons
-    new/page.tsx            # Server: <ProjectForm action={createProject} />
-    [slug]/page.tsx         # Server: reads project, <ProjectForm action={updateProject.bind(null, slug)} />
-  testimonials/             # Same pattern
-  team/                     # Same pattern
+createClient({ projectId: 'b3q3iq0h', dataset: 'production', apiVersion: '2024-01-01', useCdn: true })
 ```
 
-### Admin Components (`components/admin/`)
-All `'use client'`:
-- `ProjectForm.tsx` — `useActionState`, fields: title, category, summary, description, tech (CSV), image URL, liveUrl, order, featured
-- `TestimonialForm.tsx` — quote + author fields
-- `TeamForm.tsx` — name, role, description, photo URL
-- `DeleteButton.tsx` — `useTransition` + `confirm()` dialog; calls bound server action. Must be a Client Component — event handlers cannot be passed from Server Component props.
+### lib/sanityFetch.ts
+Typed async GROQ helpers — replace all former `readX()` calls:
+- `fetchProjects()` — all projects ordered by `order` asc, image URL resolved inline
+- `fetchTestimonials()` — all testimonials, `_id` mapped to `id`
+- `fetchTeam()` — all team members, `_id` mapped to `id`, photo URL resolved inline
+- `fetchProjectBySlug(slug)` — single project by slug
+- `fetchAllSlugs()` — array of slug strings for `generateStaticParams`
+
+GROQ queries flatten Sanity types to match existing TypeScript interfaces (no transformation needed):
+```groq
+*[_type == "portfolioProject"] | order(order asc) {
+  "slug": slug.current, title, category, ..., "image": image.asset->url
+}
+```
+
+### sanity.config.ts
+Defines three document types for the embedded Studio:
+- `portfolioProject` — title, slug, category, summary, description, tech[], featured, image, liveUrl, order
+- `portfolioTestimonial` — quote, author
+- `portfolioTeam` — name, role, description, photo
+
+### Embedded Studio — `app/studio/[[...tool]]/page.tsx`
+`'use client'` — renders `<NextStudio config={config} />` from `next-sanity/studio`. Marked `dynamic = 'force-dynamic'`. Authentication is handled by Sanity — only project members can edit.
 
 ## Color Palette — Navy + Electric Blue (Dark Theme)
 
@@ -122,7 +111,7 @@ All `'use client'`:
 - Grid: `grid-cols-1 md:grid-cols-2 lg:grid-cols-3`, sorted by `project.order`
 - Card: image area (`aspect-video`, placeholder shows 01/02/03 if no image), category badge, title, summary (`line-clamp-2`), tech pills, "View case study →"
 - Animations: `whileInView once:true`, stagger `(index % 3) * 0.12`
-- Data: `import { projects } from '@/data/projects'`
+- Data: receives `projects: Project[]` prop from `HomePageClient` (fetched from Sanity in `app/page.tsx`)
 
 ### ProcessTimelineSection.tsx ⭐⭐
 - Uses GSAP ScrollTrigger; **scroller is breakpoint-aware**:
@@ -155,23 +144,28 @@ interface UseSnapScrollProps {
 
 **Returns**: `{ currentIndex, goTo, isDesktop, isTransitioning }`
 
-### page.tsx ⭐⭐
+### app/page.tsx ⭐⭐ (async Server Component)
+```typescript
+export default async function HomePage() {
+  const [projects, testimonials, team] = await Promise.all([
+    fetchProjects(), fetchTestimonials(), fetchTeam(),
+  ]);
+  return <HomePageClient projects={projects} testimonials={testimonials} team={team} />;
+}
+```
+Fetches all Sanity data in parallel, passes to `HomePageClient`.
+
+### components/HomePageClient.tsx ⭐⭐ (`'use client'`)
+Contains all interactive homepage logic extracted from the former `app/page.tsx`:
 ```typescript
 const processTimelinePanelRef = useRef<HTMLDivElement | null>(null);
 const workPanelRef = useRef<HTMLDivElement | null>(null);
-
-const { currentIndex, goTo, isDesktop } = useSnapScroll({
-  totalSections: 8,
-  internalScrollSections: [
-    { index: 3, panelRef: processTimelinePanelRef },
-    { index: 4, panelRef: workPanelRef },
-  ],
-});
-
+const { currentIndex, goTo, isDesktop } = useSnapScroll({ ... });
 const sections = [/* single array used for both mobile and desktop */];
 ```
 - Mobile: `<Navbar />` + `<div h-[57px]>` spacer + `{sections}` + `<Footer />`
 - Desktop: `<Navbar goTo={goTo} visible={currentIndex > 0} />` + `<SnapScrollContainer>`
+- Receives `projects`, `testimonials`, `team` props and passes them down to sections
 
 ### ServicesSection.tsx
 - Tech items defined in `groups` array inside the file (not from `data/db`)
@@ -237,23 +231,16 @@ interface TeamMember {
 ## Critical Files
 
 ```
-proxy.ts                                             # Auth guard for /admin/* (Next.js 16: proxy.ts replaces middleware.ts)
-app/page.tsx                                         # Homepage, unified sections[], snap scroll wiring
-app/admin/layout.tsx                                 # Dashboard sidebar + nav
-actions/auth.ts                                      # login / logout server actions
-actions/projects.ts                                  # Project CRUD + reorder
-actions/testimonials.ts                              # Testimonial CRUD
-actions/team.ts                                      # Team CRUD
-lib/db.ts                                            # Server-side fs read/write helpers
-data/db/projects.json                                # Projects source of truth
-data/db/testimonials.json                            # Testimonials source of truth
-data/db/team.json                                    # Team source of truth
-data/projects.ts                                     # Re-exports JSON as typed Project[]
-data/testimonials.ts                                 # Re-exports JSON as typed Testimonial[]
-data/team.ts                                         # Re-exports JSON as typed TeamMember[]
+sanity.config.ts                                     # Sanity Studio schema (3 document types)
+lib/sanity.ts                                        # Sanity client config (useCdn: true, public reads)
+lib/sanityFetch.ts                                   # Typed GROQ helpers: fetchProjects, fetchTestimonials, fetchTeam, fetchProjectBySlug, fetchAllSlugs
+app/page.tsx                                         # Async Server Component — fetches Sanity data, renders HomePageClient
+app/studio/[[...tool]]/page.tsx                      # Embedded Sanity Studio route
+components/HomePageClient.tsx                        # 'use client' — snap scroll hooks, sections array, passes data props
 types/index.ts                                       # Project, Testimonial, TeamMember, Service
 styles/globals.css                                   # Dark root styles, dotPulse + cursorBlink keyframes
 tailwind.config.ts                                   # Color tokens, glow shadows
+next.config.mjs                                      # cdn.sanity.io remotePattern, reactStrictMode
 components/SnapScrollContainer.tsx                   # INTERNAL_SCROLL_INDICES = [3, 4]
 hooks/useSnapScroll.ts                               # internalScrollSections[] generalization
 hooks/useTypewriter.ts                               # Rotating typewriter (4-phase state machine)
@@ -265,14 +252,10 @@ components/sections/IntroSplashSection.tsx           # Section 0 — one-shot ty
 components/sections/HeroSection.tsx                  # Section 1 — energetic 120-particle canvas
 components/sections/ServicesSection.tsx              # Section 2 — tech icon grid
 components/sections/ProcessTimelineSection.tsx       # Section 3 — GSAP, internally scrollable
-components/sections/PortfolioSection.tsx             # Section 4 — 3-col card grid, internally scrollable
-components/sections/TeamSection.tsx                  # Section 5 — imports from data/team
-components/sections/TestimonialsSection.tsx          # Section 6 — imports from data/testimonials
+components/sections/PortfolioSection.tsx             # Section 4 — 3-col card grid, internally scrollable, projects prop
+components/sections/TeamSection.tsx                  # Section 5 — team prop
+components/sections/TestimonialsSection.tsx          # Section 6 — testimonials prop
 components/sections/FinalCtaSection.tsx              # Section 7 — CTA + embedded footer
-components/admin/ProjectForm.tsx                     # Dashboard project form (client)
-components/admin/TestimonialForm.tsx                 # Dashboard testimonial form (client)
-components/admin/TeamForm.tsx                        # Dashboard team form (client)
-components/admin/DeleteButton.tsx                    # Confirm + delete (client, useTransition)
 public/icons/shopify.svg                             # Custom Shopify icon
 ```
 
@@ -302,8 +285,6 @@ public/icons/shopify.svg                             # Custom Shopify icon
 
 | Issue | Fix |
 |-------|-----|
-| "Event handlers cannot be passed to Client Component" | Delete buttons must live in a `'use client'` component — use `DeleteButton.tsx` |
-| `#work` wheel early-return broke Portfolio escape | Removed — was only needed for old carousel. `internalScrollSections` handles everything |
 | Hydration mismatch | No `Math.random()` in render/module scope; canvas/random OK in `useEffect` only |
 | Timeline not animating | Register ScrollTrigger; `ScrollTrigger.defaults({ scroller })`; cleanup in `useEffect` return |
 | Timeline wheel scroll not working | Check scroll position BEFORE `preventDefault()` to allow internal scroll |
@@ -311,19 +292,19 @@ public/icons/shopify.svg                             # Custom Shopify icon
 | Sections clipped at bottom | Navbar is `fixed` (not `sticky`) so sections get full `100dvh` |
 | Content hidden under fixed navbar (mobile) | `<div className="h-[57px]" />` spacer after `<Navbar />` in mobile path |
 | Hero image shows box outline | Transparent PNG — don't wrap in `ring-*` or `rounded overflow-hidden` |
-| Admin sub-routes (new/edit) returning 404 | Next.js 16 + stale `.next` cache. Fix: rename `middleware.ts` → `proxy.ts` (export default function proxy), delete `.next`, restart dev server |
+| Stale `.next` type errors after deleting routes | Delete `.next/` and rebuild — auto-generated route types reference deleted pages |
 | `<Image>` crash on invalid src | `PortfolioSection` guards src: only renders `<Image>` if path starts with `/` or `https://`. Bad paths fall back to numbered placeholder |
-| Project image not showing | File must be in `public/images/`. Dashboard Image URL must start with `/` (e.g. `/images/burger.png`) or be a full `https://` URL |
-| Admin writes don't persist on Vercel | Vercel filesystem is read-only. `fs.writeFile` works locally but not in production. Fix: edit JSON files + redeploy, or migrate to a database |
-| Splash compressed to top on mobile / sections overlap | Sections used bare `h-full` but mobile `<main>` had no defined height → `h-full` resolved to `auto` and sections shrink-wrapped. Fix: `min-h-[100dvh] md:h-full` on Intro/Services/Team/Testimonials/CTA |
-| Only one Process step / one Portfolio card visible on mobile | Sections had inline `style={{ height: '100dvh', overflowY: 'auto' }}` creating a viewport-sized internal scroller. Fix: replace inline style with `md:h-[100dvh] md:overflow-y-auto` class so mobile uses natural flow |
-| Process timeline GSAP cards never appear on mobile | GSAP `scroller` was hardcoded to `sectionRef.current`, but on mobile the section is no longer a scroller. Fix: `scroller = isDesktop ? section : window` |
-| Testimonial cards wider than viewport on mobile (cut off) | Hardcoded `w-96` (384px) > 360/412 viewport. Fix: responsive card width via state, `scrollDistance` recomputed from current width |
-| Sticky section headers covered by fixed navbar on mobile | PortfolioSection's sticky header stuck to `top: 0` which is the navbar's territory on mobile. Fix: `sticky top-[57px] md:top-0` |
-| Tech icon brand colors blend into dark bg | Brand colors (Tailwind cyan, CSS3 blue, Docker blue) have low contrast on navy and the lib's `dark`/`grayscale` variants don't help. Fix: wrap each icon in a `bg-neutral-900/50 border` tile so all icons have uniform tile backdrop |
-| Services H2 "Technologies & Tools." overflows narrow viewports | `text-5xl` (48px) too big at 360/412. Fix: `text-4xl sm:text-5xl md:text-6xl` |
-| Portfolio H2 orphan "of" wrap at 360 | "Projects we're proud of" wraps as "Projects we're proud / of". Fix: `text-2xl sm:text-3xl lg:text-4xl text-balance` |
-| Two footers stacked on mobile | FinalCtaSection's embedded "minimal footer bar" rendered on mobile in addition to the dedicated `<Footer />` from `app/page.tsx`. Fix: `hidden md:block` on the embedded bar — desktop snap panel keeps it, mobile shows only the proper Footer.tsx |
+| Sanity image not showing | Upload via Studio image field. URL is served from `cdn.sanity.io` — whitelisted in `next.config.mjs`. GROQ query uses `image.asset->url` projection |
+| Splash compressed to top on mobile / sections overlap | Fix: `min-h-[100dvh] md:h-full` on sections |
+| Only one Process step / one Portfolio card visible on mobile | Fix: `md:h-[100dvh] md:overflow-y-auto` — drops internal scroller on mobile |
+| Process timeline GSAP cards never appear on mobile | Fix: `scroller = isDesktop ? section : window` |
+| Testimonial cards wider than viewport on mobile (cut off) | Fix: responsive card width via state, `scrollDistance` recomputed from current width |
+| Sticky section headers covered by fixed navbar on mobile | Fix: `sticky top-[57px] md:top-0` |
+| Tech icon brand colors blend into dark bg | Fix: wrap each icon in `bg-neutral-900/50 border` tile |
+| Services H2 overflows narrow viewports | Fix: `text-4xl sm:text-5xl md:text-6xl` |
+| Portfolio H2 orphan "of" wrap at 360 | Fix: `text-2xl sm:text-3xl lg:text-4xl text-balance` |
+| Two footers stacked on mobile | Fix: `hidden md:block` on FinalCtaSection's embedded footer bar |
+| `/work/[slug]` not regenerated after new Sanity content | Static pages built from `generateStaticParams` — redeploy or add `next: { revalidate: 60 }` in `fetchProjectBySlug` for ISR |
 
 ## Animation Guidelines
 
@@ -347,31 +328,28 @@ public/icons/shopify.svg                             # Custom Shopify icon
 ## Installation & Quick Start
 
 ```bash
-npm install        # Includes gsap, tech-stack-icons
+npm install        # Includes gsap, tech-stack-icons, @sanity/client, next-sanity
 npm run dev        # Dev server on :3000
 npm run build
 npm run start
 ```
 
-```env
-# .env.local — required for admin
-ADMIN_PASSWORD=your-password-here
-```
+No `.env.local` required for public reads — Sanity dataset is public.
 
 ## Future Enhancements
 
-- Real project images (add via dashboard image URL field → appears in PortfolioSection cards)
-- Flesh out `/app/work/[slug]/` with project-specific content (add fields to `Project` type and JSON)
+- Flesh out `/app/work/[slug]/` with project-specific content (use Sanity `description` and additional fields)
 - Contact form with server action + email (Resend / Nodemailer)
 - ProcessTimeline SVG redesign: branching connector lines, animated `strokeDashoffset`
-- CMS migration: replace JSON files with Sanity or Contentful for hosted editing without redeploy
+- ISR for `/work/[slug]` — add `next: { revalidate: 60 }` to `fetchProjectBySlug` so new projects appear without redeploying
+- Sanity webhook → Vercel Deploy Hook for automatic redeploys on content publish
 
 ---
 
-**Last Updated**: May 2026 (mobile responsive pass — section heights, GSAP mobile scroller, responsive testimonial marquee, sticky-header navbar clearance, services title overflow, icon tile backgrounds, portfolio H2 text-balance)  
+**Last Updated**: May 2026 (Sanity v3 CMS migration — replaced JSON data layer and custom admin with Sanity Cloud + embedded Studio at `/studio`)  
 **Dark Theme (Navy + Electric Blue)**: ✅  
 **Animated Backgrounds**: ✅ (dot grid, aurora blobs, network canvas)  
 **Full-Page Snap Scroll**: ✅ (sections 3 & 4 internally scrollable via `internalScrollSections[]`)  
-**Portfolio Section**: ✅ (3-col card grid, replaced carousel)  
-**Admin Dashboard**: ✅ (password gate, CRUD for projects / testimonials / team, JSON data layer)  
-**Next Task**: Add real project images and flesh out case study pages
+**Portfolio Section**: ✅ (3-col card grid, Sanity data)  
+**Content Management**: ✅ (Sanity Studio at `/studio`, no local edits or GitHub pushes needed)  
+**Next Task**: Flesh out case study pages with full Sanity content; consider ISR or deploy hooks for instant content updates

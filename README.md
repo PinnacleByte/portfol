@@ -1,6 +1,6 @@
 # PinnacleByte Portfolio
 
-Premium dark-themed web development studio portfolio with energetic animations and a built-in content dashboard.
+Premium dark-themed web development studio portfolio with energetic animations and Sanity-powered content management.
 
 ## Stack
 
@@ -10,6 +10,7 @@ Premium dark-themed web development studio portfolio with energetic animations a
 - **Framer Motion** — entrance animations, aurora backgrounds, full-page snap scroll
 - **GSAP + ScrollTrigger** — ProcessTimeline scroll-synchronised animations
 - **Canvas** — NetworkCanvas particle system with animated connectors
+- **Sanity v3** — hosted CMS, Studio embedded at `/studio`
 
 ## Quick Start
 
@@ -20,102 +21,85 @@ npm run build
 npm run start
 ```
 
-## Admin Dashboard
+## Content Management (Sanity Studio)
 
-The dashboard lives at `/admin`. It requires a password stored in `.env.local`:
+All content (projects, testimonials, team members) is managed through Sanity Studio, embedded at `/studio`.
 
-```bash
-# .env.local
-ADMIN_PASSWORD=your-password-here
+- Visit `http://localhost:3000/studio` in dev, or `https://yoursite.com/studio` after deploying to Vercel.
+- Sign in with your Sanity account (the one that owns project `b3q3iq0h`).
+- Changes publish immediately — no local file edits or GitHub pushes needed.
+
+**Sanity project details:**
+
+| Setting | Value |
+|---------|-------|
+| Project ID | `b3q3iq0h` |
+| Dataset | `production` |
+| API version | `2024-01-01` |
+
+**Document types managed in Studio:**
+- `portfolioProject` — title, slug, category, summary, description, tech stack, featured flag, image, live URL, order
+- `portfolioTestimonial` — quote, author
+- `portfolioTeam` — name, role, description, photo
+
+**Adding project images:**
+- Upload images directly in Sanity Studio using the image field — no file system access needed.
+- Images are served from `cdn.sanity.io` and rendered with Next.js `<Image>` (domain is whitelisted in `next.config.mjs`).
+
+## Data Flow
+
+```
+Sanity Cloud (hosted CMS)
+  ↓ GROQ queries (lib/sanityFetch.ts)
+app/page.tsx (Server Component)
+  ↓ props
+components/HomePageClient.tsx (Client Component — snap scroll, hooks)
+  ↓ props
+PortfolioSection / TeamSection / TestimonialsSection
 ```
 
-Navigate to `http://localhost:3000/admin` → login page → full CRUD for Projects, Testimonials, and Team members.
-
-**How data flows:**
-- All content is stored in `data/db/*.json` (source of truth)
-- `data/projects.ts`, `data/testimonials.ts`, `data/team.ts` re-export from JSON — used by public-facing components
-- Dashboard server actions (`actions/`) read/write the JSON files directly via `lib/db.ts`
-- On Vercel: commit the updated JSON files and redeploy to publish changes
-
-> **Vercel limitation:** The dashboard's write operations (`fs.writeFile`) do not persist on Vercel — the serverless filesystem is read-only. Edits made through the dashboard will work locally but won't survive a redeploy. For persistent production editing, swap `lib/db.ts` for a database (e.g. Vercel Postgres, Supabase).
-
-**Project images:**
-- Place image files in the `public/images/` folder (e.g. `public/images/my-project.png`)
-- Set the Image URL field in the dashboard to `/images/my-project.png` (must start with `/`)
-- External images also work — use the full `https://` URL
-- Any other format (relative path without `/`, bare filename) will be silently ignored and the numbered placeholder shown instead
+Public reads use CDN caching (`useCdn: true`). `/work/[slug]` routes are pre-rendered at build time via `generateStaticParams` from Sanity slugs.
 
 ## Project Structure
 
 ```
 app/
-  page.tsx                          # Homepage — snap scroll (desktop) / stacked (mobile)
-  admin/
-    login/page.tsx                  # Password gate
-    layout.tsx                      # Shared sidebar (Projects / Testimonials / Team / Sign out)
-    page.tsx                        # Redirects to /admin/projects
-    projects/
-      page.tsx                      # Project list + reorder
-      new/page.tsx                  # Add project form
-      [slug]/page.tsx               # Edit project form
-    testimonials/
-      page.tsx                      # Testimonials list
-      new/page.tsx                  # Add testimonial form
-      [id]/page.tsx                 # Edit testimonial form
-    team/
-      page.tsx                      # Team list
-      new/page.tsx                  # Add team member form
-      [id]/page.tsx                 # Edit team member form
+  page.tsx                          # Server Component — fetches Sanity data, renders HomePageClient
+  studio/[[...tool]]/page.tsx       # Embedded Sanity Studio (dynamic, auth via Sanity account)
   work/
-    page.tsx                        # All projects gallery
-    [slug]/page.tsx                 # Case study detail page
-actions/
-  auth.ts                           # login / logout server actions
-  projects.ts                       # create / update / delete / reorder
-  testimonials.ts                   # create / update / delete
-  team.ts                           # create / update / delete
+    page.tsx                        # All projects gallery — fetches from Sanity
+    [slug]/page.tsx                 # Case study detail — static params from Sanity slugs
+  contact/page.tsx                  # Contact page
 components/
-  admin/
-    ProjectForm.tsx                 # Client form (useActionState)
-    TestimonialForm.tsx             # Client form
-    TeamForm.tsx                    # Client form
-    DeleteButton.tsx                # Client confirm + delete
-  image/
-    hero.png                        # Hero illustration (transparent PNG)
+  HomePageClient.tsx                # 'use client' — snap scroll hooks, passes data to sections
   sections/
-    IntroSplashSection.tsx          # Cinematic intro — NetworkCanvas bg + single-phrase typewriter
-    HeroSection.tsx                 # Two-column hero with word-by-word animations
-    ServicesSection.tsx             # Tech stack icon grid + dot grid background
-    ProcessTimelineSection.tsx      # GSAP scroll-driven timeline (7 steps) + dot grid background
-    PortfolioSection.tsx            # 3-col card grid, internally scrollable (same pattern as ProcessTimeline)
-    TeamSection.tsx                 # Aurora blob background, data from data/team.ts
-    TestimonialsSection.tsx         # Marquee + aurora blob background, data from data/testimonials.ts
-    FinalCtaSection.tsx             # Full-bleed CTA + network graph background + embedded footer
+    IntroSplashSection.tsx          # Section 0 — NetworkCanvas + one-shot typewriter
+    HeroSection.tsx                 # Section 1 — 120-particle canvas, blur-reveal headline
+    ServicesSection.tsx             # Section 2 — Tech icon grid, dot grid background
+    ProcessTimelineSection.tsx      # Section 3 — GSAP ScrollTrigger, internally scrollable
+    PortfolioSection.tsx            # Section 4 — 3-col card grid, internally scrollable, projects prop
+    TeamSection.tsx                 # Section 5 — Aurora background, team prop
+    TestimonialsSection.tsx         # Section 6 — Marquee, aurora background, testimonials prop
+    FinalCtaSection.tsx             # Section 7 — CTA + embedded footer
   ui/
     Navbar.tsx                      # Fixed navbar, hidden on intro, snap-nav on desktop
-    Button.tsx
     Footer.tsx                      # Mobile only
-    DotGridBackground.tsx           # 18×11 pulsing dot grid (CSS animation, shared)
-    AuroraBackground.tsx            # 3 drifting blur blobs (Framer Motion, shared)
-    NetworkCanvas.tsx               # Particle system with connectors (configurable, shared)
+    NetworkCanvas.tsx               # Particle system (configurable)
+    DotGridBackground.tsx           # 18×11 pulsing dot grid
+    AuroraBackground.tsx            # 3 drifting blur blobs
   SnapScrollContainer.tsx           # Desktop full-page snap wrapper
-data/
-  db/
-    projects.json                   # Source of truth — written by dashboard
-    testimonials.json               # Source of truth — written by dashboard
-    team.json                       # Source of truth — written by dashboard
-  projects.ts                       # Re-exports from db/projects.json
-  testimonials.ts                   # Re-exports from db/testimonials.json
-  team.ts                           # Re-exports from db/team.json
+lib/
+  sanity.ts                         # Sanity client config (useCdn: true, public reads)
+  sanityFetch.ts                    # Typed GROQ fetch helpers: fetchProjects, fetchTeam, fetchTestimonials, etc.
+  lenis.ts                          # Lenis smooth scroll factory (mobile only)
 hooks/
   useSnapScroll.ts                  # Snap-scroll state + wheel/keyboard handlers
-  useTypewriter.ts                  # Rotating typewriter effect (state machine)
-lib/
-  db.ts                             # Server-side readX / writeX helpers (fs/promises)
-proxy.ts                            # Protects all /admin/* routes (Next.js 16 convention)
+  useTypewriter.ts                  # Rotating typewriter state machine
+sanity.config.ts                    # Sanity Studio schema (3 document types)
 styles/
-  globals.css                       # Dark root styles, dotPulse + cursorBlink keyframes
+  globals.css                       # Dark root styles, keyframes
 tailwind.config.ts                  # Color tokens, glow shadows
+next.config.mjs                     # cdn.sanity.io remotePattern, reactStrictMode
 types/
   index.ts                          # Project, Testimonial, TeamMember, Service interfaces
 ```
@@ -124,18 +108,18 @@ types/
 
 | Index | Section | Background | Notes |
 |-------|---------|------------|-------|
-| 0 | IntroSplashSection | Network Graph | Cinematic intro, single-phrase typewriter, navbar hidden |
-| 1 | HeroSection | Network Graph (enhanced) | 120 particles, prominent connections, rotating typewriter eyebrow |
-| 2 | ServicesSection | Dot Grid Pulse | Tech icon grid, whileInView animations |
-| 3 | ProcessTimelineSection | Dot Grid Pulse (sticky) | GSAP, internally scrollable, 7 steps |
-| 4 | PortfolioSection | — | 3-col card grid, internally scrollable, data-driven from projects.json |
-| 5 | TeamSection | Aurora Blobs | Data from data/team.ts |
-| 6 | TestimonialsSection | Aurora Blobs | Marquee, data from data/testimonials.ts |
-| 7 | FinalCtaSection | Network Graph | 60 particles, CTA + embedded footer |
+| 0 | IntroSplashSection | Network Graph | Cinematic intro, navbar hidden |
+| 1 | HeroSection | Network Graph (enhanced) | 120 particles, rotating typewriter eyebrow |
+| 2 | ServicesSection | Dot Grid Pulse | Tech icon grid |
+| 3 | ProcessTimelineSection | Dot Grid Pulse (sticky) | GSAP, internally scrollable |
+| 4 | PortfolioSection | — | 3-col card grid, internally scrollable, Sanity data |
+| 5 | TeamSection | Aurora Blobs | Sanity data |
+| 6 | TestimonialsSection | Aurora Blobs | Marquee, Sanity data |
+| 7 | FinalCtaSection | Network Graph | CTA + embedded footer |
 
 ## Snap Scroll Architecture
 
-Sections 3 and 4 (ProcessTimeline, Portfolio) scroll internally before the snap advances. `useSnapScroll` handles this via `internalScrollSections`:
+Sections 3 and 4 scroll internally before the snap advances. `useSnapScroll` handles this via `internalScrollSections`:
 
 ```typescript
 useSnapScroll({
@@ -147,75 +131,33 @@ useSnapScroll({
 });
 ```
 
-`SnapScrollContainer` sets `overflow: auto` on panels at indices `[3, 4]` and `overflow: hidden` on all others.
-
 ## Mobile vs Desktop Layout
 
-The breakpoint is `min-width: 768px`. Above it, the snap-scroll deck runs; below it, sections stack and the page scrolls normally.
+The breakpoint is `min-width: 768px`.
 
 | Concern | Desktop (≥ 768px) | Mobile (< 768px) |
 |---------|-------------------|-------------------|
-| Layout | SnapScrollContainer translates a stack of `100dvh` panels | Plain stacked sections inside `<main>` |
-| Section height | `h-full` resolves to 100dvh (panels supply the height) | `min-h-[100dvh]` so each section is at least one viewport tall and can grow |
-| Process & Portfolio scroll | Internally scrollable (`md:h-[100dvh] md:overflow-y-auto`) | Natural flow — no internal scroller |
-| GSAP scroller (ProcessTimeline) | Section element | `window` |
-| Sticky headers | `top-0` of the section's scroll container | `top-[57px]` to clear the fixed navbar |
-| Testimonials marquee card width | 384px | 320px (sm) / 280px (base); `scrollDistance` recomputed on resize |
-| Lenis smooth scroll | Disabled | Enabled |
-| Navbar nav | `<button>` calling `goTo(index)` | `<a href="#id">` anchor links |
-| Footer | Embedded minimal bar inside FinalCtaSection (panel 7) | Separate `<Footer />` after sections; CTA's embedded bar is `hidden md:block` so it doesn't double up |
+| Layout | SnapScrollContainer — 100dvh panels | Plain stacked sections |
+| Section height | `h-full` resolves to 100dvh | `min-h-[100dvh]` |
+| Process & Portfolio scroll | Internal scroller (`md:h-[100dvh] md:overflow-y-auto`) | Natural flow |
+| GSAP scroller | Section element | `window` |
 
-## Animated Backgrounds
+## Deployment (Vercel)
 
-**Dot Grid Pulse** (`DotGridBackground.tsx`)
-18×11 grid of dots. CSS `dotPulse` keyframe with delay computed from distance to centre — outward ripple. Zero JS runtime cost. Used with `sticky top-0` + `marginBottom: -100dvh` in ProcessTimeline so the grid stays visible while content scrolls.
+Deploy the repo to Vercel with no extra environment variables — public Sanity reads need no token. After deploying:
 
-**Aurora Blobs** (`AuroraBackground.tsx`)
-Three large blurred Framer Motion divs (`blur-[110–140px]`) in blue, sky, and violet tints. Independent drift loops (16/22/19s).
-
-**Network Graph** (`NetworkCanvas.tsx`)
-Configurable canvas component: `particleCount`, `connectionRadius`, `particleSize`, `particleAlpha`, `lineAlpha`, `speed`.
-
-| Section | Particles | Radius | Feel |
-|---------|-----------|--------|------|
-| IntroSplash | 100 | 180px | Dramatic |
-| Hero | 120 | 180px | Most energetic |
-| FinalCta | 60 | 155px | Subtle |
-
-## Key Behaviours
-
-**Full-page snap scroll (desktop only)**
-Each wheel tick or arrow key advances one section. 700ms cubic-bezier `[0.76, 0, 0.24, 1]` transition. Sections 3 and 4 scroll internally before advancing. 750ms throttle prevents rapid jumps.
-
-**Navbar**
-`position: fixed` — out of document flow so every section panel fills `100dvh`. On mobile a `57px` spacer div fills the gap below the bar. On desktop, hidden (`opacity: 0, pointerEvents: none`) while on intro (index 0), fades in from index 1 via `visible` prop.
-
-**Animations**
-- HeroSection: `animate` (fires on load). Headline words blur-reveal with 90ms stagger.
-- Other sections: `whileInView` + `once: true` (fires when panel snaps into view).
-- Tech icons: spring physics (`stiffness: 220, damping: 18`).
-- Background blobs: always-on `animate` loops.
-
-## Tech Stack Icons
-
-From [tech-stack-icons](https://www.tech-stack-icons.com/) npm package (v3.7.1, MIT):
-- **Frontend** (7): React, Next.js, TypeScript, JavaScript, HTML5, CSS3, Tailwind
-- **Backend & Platforms** (6): Node.js, Express, MongoDB, Docker, PostgreSQL, Shopify
-- **Design & Tools** (2): Figma, Git
-
-Next.js and Express use `dark` variant. Shopify uses a custom SVG (`/public/icons/shopify.svg`).
-
-Each icon is wrapped in a uniform tile (`bg-neutral-900/50 border border-neutral-800/70 rounded-2xl p-3`) so low-contrast brand icons (cyan Tailwind, blue CSS3, blue Docker) read clearly against the navy background.
+- `/studio` gives you a live content editing UI (log in with your Sanity account)
+- Content changes in Sanity Studio are visible on the live site immediately (CDN-cached, no redeploy needed)
+- `/work/[slug]` pages are statically generated at build time from Sanity data — add a new project in Studio and redeploy (or enable ISR) to generate its page
 
 ## Colour Tokens (Dark Theme)
 
 | Token | Hex | Usage |
 |-------|-----|-------|
-| `bg-bg-dark` | `#0F172A` | Page background (dark navy) |
-| `text-primary-50` | `#F8FAFC` | Headings & text |
-| `text-primary-300` | `#CBD5E1` | Body / nav links |
+| `bg-bg-dark` | `#0F172A` | Page background |
+| `text-primary-50` | `#F8FAFC` | Headings |
+| `text-primary-300` | `#CBD5E1` | Body text |
 | `text-accent-400` | `#60A5FA` | Highlights, eyebrows |
 | `bg-accent-500` | `#3B82F6` | CTA buttons, glow |
-| `bg-accent-600` | `#2563EB` | Button hover, focus |
 | `border-neutral-700` | `#334155` | Card borders |
 | `bg-neutral-900` | `#1E293B` | Card surfaces |

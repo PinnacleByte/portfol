@@ -2,7 +2,6 @@
 
 import { motion } from 'framer-motion';
 import SectionHeading from '@/components/ui/SectionHeading';
-import { projects } from '@/data/projects';
 import { Project } from '@/types';
 import { ArrowRight } from 'lucide-react';
 
@@ -31,7 +30,11 @@ function ProjectCard({ project }: { project: Project }) {
   );
 }
 
-export default function SelectedWorkSection() {
+interface SelectedWorkSectionProps {
+  projects: Project[];
+}
+
+export default function SelectedWorkSection({ projects }: SelectedWorkSectionProps) {
   return (
     <section id="work" className="bg-bg-dark py-20 md:py-28">
       <div className="container">
