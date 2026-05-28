@@ -4,6 +4,7 @@ import { structureTool } from 'sanity/structure';
 export default defineConfig({
   projectId: 'b3q3iq0h',
   dataset: 'production',
+  basePath: '/studio',
   plugins: [structureTool()],
   schema: {
     types: [
