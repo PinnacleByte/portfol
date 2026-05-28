@@ -28,16 +28,18 @@ const TEAM_QUERY = `*[_type == "portfolioTeam"] {
   "photo": photo.asset->url
 }`;
 
+const REVALIDATE = { next: { revalidate: 60 } };
+
 export async function fetchProjects(): Promise<Project[]> {
-  return sanityClient.fetch<Project[]>(PROJECTS_QUERY);
+  return sanityClient.fetch<Project[]>(PROJECTS_QUERY, {}, REVALIDATE);
 }
 
 export async function fetchTestimonials(): Promise<Testimonial[]> {
-  return sanityClient.fetch<Testimonial[]>(TESTIMONIALS_QUERY);
+  return sanityClient.fetch<Testimonial[]>(TESTIMONIALS_QUERY, {}, REVALIDATE);
 }
 
 export async function fetchTeam(): Promise<TeamMember[]> {
-  return sanityClient.fetch<TeamMember[]>(TEAM_QUERY);
+  return sanityClient.fetch<TeamMember[]>(TEAM_QUERY, {}, REVALIDATE);
 }
 
 export async function fetchProjectBySlug(slug: string): Promise<Project | null> {
@@ -54,13 +56,16 @@ export async function fetchProjectBySlug(slug: string): Promise<Project | null> 
       liveUrl,
       order
     }`,
-    { slug }
+    { slug },
+    REVALIDATE
   );
 }
 
 export async function fetchAllSlugs(): Promise<string[]> {
   const results = await sanityClient.fetch<{ slug: string }[]>(
-    `*[_type == "portfolioProject"] { "slug": slug.current }`
+    `*[_type == "portfolioProject"] { "slug": slug.current }`,
+    {},
+    REVALIDATE
   );
   return results.map((r) => r.slug);
 }
