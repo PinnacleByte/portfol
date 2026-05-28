@@ -52,7 +52,7 @@ app/
 
 | File | Purpose |
 |------|---------|
-| `sanity.ts` | Sanity client (`createClient`) — `projectId: b3q3iq0h`, `dataset: production`, `useCdn: true` |
+| `sanity.ts` | Sanity client (`createClient`) — `projectId: b3q3iq0h`, `dataset: production`, `useCdn: false` (direct API, no CDN cache) |
 | `sanityFetch.ts` | Typed GROQ fetch helpers: `fetchProjects`, `fetchTestimonials`, `fetchTeam`, `fetchProjectBySlug`, `fetchAllSlugs` |
 | `lenis.ts` | Lenis smooth scroll factory (mobile only) |
 
@@ -78,7 +78,7 @@ public/
 |------|---------|
 | `sanity.config.ts` | Sanity Studio schema — defines `portfolioProject`, `portfolioTestimonial`, `portfolioTeam` document types |
 | `tailwind.config.ts` | Color tokens, glow shadows |
-| `next.config.mjs` | `cdn.sanity.io` remotePattern for Next.js Image, `reactStrictMode: true` |
+| `next.config.mjs` | `cdn.sanity.io` remotePattern, `reactStrictMode: true`, security headers (X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy) |
 | `tsconfig.json` | `moduleResolution: bundler`, TypeScript 6 |
 
 ## Sanity Data Flow
@@ -104,8 +104,8 @@ components/HomePageClient.tsx  ['use client']
 
 - No environment variables required for public reads (Sanity dataset is public).
 - Deploy and visit `/studio` — sign in with your Sanity account to manage all content.
-- Content is live immediately after saving in Studio (CDN-cached).
-- To regenerate static `/work/[slug]` pages after adding content: redeploy, or enable ISR with `next: { revalidate: 60 }` in `lib/sanityFetch.ts`.
+- Content changes appear on the live site within ~60 seconds of publishing (ISR revalidation via `next: { revalidate: 60 }` on all fetch calls).
+- For local Studio access, add `http://localhost:3000` to CORS Origins in [sanity.io/manage](https://sanity.io/manage) → API tab.
 
 ## Key Styling Conventions
 

@@ -27,7 +27,8 @@ All content (projects, testimonials, team members) is managed through Sanity Stu
 
 - Visit `http://localhost:3000/studio` in dev, or `https://yoursite.com/studio` after deploying to Vercel.
 - Sign in with your Sanity account (the one that owns project `b3q3iq0h`).
-- Changes publish immediately — no local file edits or GitHub pushes needed.
+- Publish changes in Studio — they appear on the live site within ~60 seconds (ISR revalidation).
+- **Local dev**: add `http://localhost:3000` to CORS Origins in [sanity.io/manage](https://sanity.io/manage) → project → API tab.
 
 **Sanity project details:**
 
@@ -58,7 +59,7 @@ components/HomePageClient.tsx (Client Component — snap scroll, hooks)
 PortfolioSection / TeamSection / TestimonialsSection
 ```
 
-Public reads use CDN caching (`useCdn: true`). `/work/[slug]` routes are pre-rendered at build time via `generateStaticParams` from Sanity slugs.
+Public reads bypass the Sanity CDN (`useCdn: false`) and revalidate every 60 seconds (`next: { revalidate: 60 }`) so Studio changes appear on the live site within ~60 seconds of publishing. `/work/[slug]` routes are pre-rendered at build time via `generateStaticParams` from Sanity slugs.
 
 ## Project Structure
 
@@ -89,7 +90,7 @@ components/
     AuroraBackground.tsx            # 3 drifting blur blobs
   SnapScrollContainer.tsx           # Desktop full-page snap wrapper
 lib/
-  sanity.ts                         # Sanity client config (useCdn: true, public reads)
+  sanity.ts                         # Sanity client config (useCdn: false, direct API reads)
   sanityFetch.ts                    # Typed GROQ fetch helpers: fetchProjects, fetchTeam, fetchTestimonials, etc.
   lenis.ts                          # Lenis smooth scroll factory (mobile only)
 hooks/
@@ -99,7 +100,7 @@ sanity.config.ts                    # Sanity Studio schema (3 document types)
 styles/
   globals.css                       # Dark root styles, keyframes
 tailwind.config.ts                  # Color tokens, glow shadows
-next.config.mjs                     # cdn.sanity.io remotePattern, reactStrictMode
+next.config.mjs                     # cdn.sanity.io remotePattern, reactStrictMode, security headers
 types/
   index.ts                          # Project, Testimonial, TeamMember, Service interfaces
 ```
@@ -147,8 +148,8 @@ The breakpoint is `min-width: 768px`.
 Deploy the repo to Vercel with no extra environment variables — public Sanity reads need no token. After deploying:
 
 - `/studio` gives you a live content editing UI (log in with your Sanity account)
-- Content changes in Sanity Studio are visible on the live site immediately (CDN-cached, no redeploy needed)
-- `/work/[slug]` pages are statically generated at build time from Sanity data — add a new project in Studio and redeploy (or enable ISR) to generate its page
+- Content changes in Sanity Studio appear on the live site within ~60 seconds (ISR, no redeploy needed)
+- `/work/[slug]` pages are statically generated at build time from Sanity data — new projects also revalidate every 60 seconds via ISR
 
 ## Colour Tokens (Dark Theme)
 

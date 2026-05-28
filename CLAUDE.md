@@ -45,8 +45,9 @@ components/HomePageClient.tsx  ['use client' — hooks, snap scroll]
 
 ### lib/sanity.ts
 ```typescript
-createClient({ projectId: 'b3q3iq0h', dataset: 'production', apiVersion: '2024-01-01', useCdn: true })
+createClient({ projectId: 'b3q3iq0h', dataset: 'production', apiVersion: '2024-01-01', useCdn: false })
 ```
+`useCdn: false` bypasses Sanity's CDN cache so server-side fetches always hit the API directly. Combined with `next: { revalidate: 60 }` on every fetch call, Studio changes appear on the live site within ~60 seconds of publishing.
 
 ### lib/sanityFetch.ts
 Typed async GROQ helpers — replace all former `readX()` calls:
@@ -64,7 +65,7 @@ GROQ queries flatten Sanity types to match existing TypeScript interfaces (no tr
 ```
 
 ### sanity.config.ts
-Defines three document types for the embedded Studio:
+`basePath: '/studio'` is required — without it Sanity's internal router misreads the URL and shows "Tool not found: studio". Defines three document types for the embedded Studio:
 - `portfolioProject` — title, slug, category, summary, description, tech[], featured, image, liveUrl, order
 - `portfolioTestimonial` — quote, author
 - `portfolioTeam` — name, role, description, photo
@@ -304,7 +305,10 @@ public/icons/shopify.svg                             # Custom Shopify icon
 | Services H2 overflows narrow viewports | Fix: `text-4xl sm:text-5xl md:text-6xl` |
 | Portfolio H2 orphan "of" wrap at 360 | Fix: `text-2xl sm:text-3xl lg:text-4xl text-balance` |
 | Two footers stacked on mobile | Fix: `hidden md:block` on FinalCtaSection's embedded footer bar |
-| `/work/[slug]` not regenerated after new Sanity content | Static pages built from `generateStaticParams` — redeploy or add `next: { revalidate: 60 }` in `fetchProjectBySlug` for ISR |
+| `/work/[slug]` not regenerated after new Sanity content | ISR is enabled — `next: { revalidate: 60 }` on all fetch calls; pages regenerate within 60s of publishing |
+| Studio shows "Tool not found: studio" | `basePath: '/studio'` was missing from `sanity.config.ts` — must match the route where Studio is mounted |
+| Studio CORS error on localhost | Add `http://localhost:3000` (with credentials) to CORS Origins in sanity.io/manage → project → API tab |
+| Studio changes not reflecting on live site | `useCdn: true` serves stale CDN data; fix is `useCdn: false` + `next: { revalidate: 60 }` on all fetches |
 
 ## Animation Guidelines
 
@@ -341,15 +345,16 @@ No `.env.local` required for public reads — Sanity dataset is public.
 - Flesh out `/app/work/[slug]/` with project-specific content (use Sanity `description` and additional fields)
 - Contact form with server action + email (Resend / Nodemailer)
 - ProcessTimeline SVG redesign: branching connector lines, animated `strokeDashoffset`
-- ISR for `/work/[slug]` — add `next: { revalidate: 60 }` to `fetchProjectBySlug` so new projects appear without redeploying
-- Sanity webhook → Vercel Deploy Hook for automatic redeploys on content publish
+- Sanity webhook → Vercel Deploy Hook for automatic redeploys on content publish (ISR already handles ~60s updates; webhook would make it instant)
 
 ---
 
-**Last Updated**: May 2026 (Sanity v3 CMS migration — replaced JSON data layer and custom admin with Sanity Cloud + embedded Studio at `/studio`)  
+**Last Updated**: May 2026 (ISR + security hardening — Sanity CDN bypass, revalidation, security headers)  
 **Dark Theme (Navy + Electric Blue)**: ✅  
 **Animated Backgrounds**: ✅ (dot grid, aurora blobs, network canvas)  
 **Full-Page Snap Scroll**: ✅ (sections 3 & 4 internally scrollable via `internalScrollSections[]`)  
 **Portfolio Section**: ✅ (3-col card grid, Sanity data)  
-**Content Management**: ✅ (Sanity Studio at `/studio`, no local edits or GitHub pushes needed)  
-**Next Task**: Flesh out case study pages with full Sanity content; consider ISR or deploy hooks for instant content updates
+**Content Management**: ✅ (Sanity Studio at `/studio`, changes live within ~60s of publishing)  
+**ISR**: ✅ (`useCdn: false` + `next: { revalidate: 60 }` on all fetch calls)  
+**Security Headers**: ✅ (X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy — grade A on securityheaders.com)  
+**Next Task**: Flesh out case study pages with full Sanity content
