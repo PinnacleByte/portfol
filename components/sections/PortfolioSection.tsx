@@ -48,20 +48,31 @@ function ProjectCard({ project, index }: { project: Project; index: number }) {
       viewport={{ once: true }}
       transition={{ duration: 0.5, ease: 'easeOut', delay: (index % 3) * 0.12 }}
       className="bg-neutral-900 rounded-2xl border border-neutral-800 overflow-hidden
-                 hover:border-accent-500/40 transition-colors group"
+                 transition-all duration-300 ease-out group
+                 hover:-translate-y-1.5 hover:border-accent-500/50 hover:shadow-teal-glow-lg"
     >
       {/* Image area */}
       <div className="aspect-video bg-neutral-800 relative overflow-hidden">
         {project.image?.startsWith('/') || project.image?.startsWith('http') ? (
-          <Image src={project.image} alt={project.title} fill style={{ objectFit: 'cover' }} />
+          <Image
+            src={project.image}
+            alt={project.title}
+            fill
+            style={{ objectFit: 'cover' }}
+            className="transition-transform duration-500 ease-out group-hover:scale-105"
+          />
         ) : (
           <div className="absolute inset-0 bg-gradient-to-br from-neutral-800 to-neutral-900
                           flex items-center justify-center">
-            <span className="text-neutral-700 font-black text-8xl select-none">
+            <span className="text-neutral-700 font-black text-8xl select-none
+                             transition-transform duration-500 ease-out group-hover:scale-110">
               {String(index + 1).padStart(2, '0')}
             </span>
           </div>
         )}
+        {/* Hover overlay — subtle darken at the bottom edge */}
+        <div className="absolute inset-0 bg-gradient-to-t from-bg-dark/60 via-transparent to-transparent
+                        opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
       </div>
 
       {/* Content */}
@@ -85,9 +96,28 @@ function ProjectCard({ project, index }: { project: Project; index: number }) {
           href={project.liveUrl ?? '#'}
           target={project.liveUrl ? '_blank' : undefined}
           rel={project.liveUrl ? 'noopener noreferrer' : undefined}
-          className="text-sm text-accent-400 hover:text-accent-300 inline-flex items-center gap-1"
+          className="inline-flex items-center gap-1.5 rounded-full border border-accent-500/40
+                     bg-accent-500/10 px-4 py-2 text-sm font-semibold text-accent-300
+                     transition-all duration-300 group-hover:border-accent-500
+                     group-hover:bg-accent-500 group-hover:text-white group-hover:shadow-teal-glow
+                     hover:!bg-accent-600"
         >
-          View case study →
+          Visit this site
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
+            aria-hidden="true"
+          >
+            <path d="M7 17L17 7" />
+            <path d="M7 7h10v10" />
+          </svg>
         </a>
       </div>
     </motion.div>

@@ -2,15 +2,15 @@
 
 ## Project Overview
 
-**PinnacleByte Portfolio** — Premium dark-themed web development studio portfolio using Next.js 16, React 19, TypeScript, Tailwind CSS, Framer Motion, GSAP, and Sanity v3 CMS. Content managed via Sanity Studio embedded at `/studio`.
+**PinnacleByte Portfolio** — Premium dark-themed web development studio portfolio using Next.js 16, React 19, TypeScript, Tailwind CSS, Framer Motion, and Sanity v3 CMS. Content managed via Sanity Studio embedded at `/studio`.
 
-## Current Status — May 2026 (updated)
+## Current Status — June 2026 (updated)
 
 ✅ **Intro Splash Section** — NetworkCanvas bg, one-shot typewriter, navbar hidden on section 0  
 ✅ **Hero Section** — 120-particle NetworkCanvas, rotating typewriter eyebrow, two-column layout  
 ✅ **Services Section** — Tech icon grid (real brand icons w/ tile background), dot grid background  
-✅ **Process Timeline** — GSAP ScrollTrigger, 7 steps, internally scrollable on desktop / natural flow on mobile, sticky dot grid  
-✅ **Portfolio Section** — 3-column card grid, internally scrollable on desktop / natural flow on mobile  
+✅ **Process (Scrollytelling)** — Sticky split layout: left rail w/ live step highlight + progress, scrolling IntersectionObserver-driven detail panels (no GSAP), internally scrollable on desktop / stacked cards on mobile, sticky dot grid  
+✅ **Portfolio Section** — 3-column card grid w/ hover lift + glow + image zoom and a rounded "Visit this site" button, internally scrollable on desktop / natural flow on mobile  
 ✅ **Team Section** — Aurora blobs, data from Sanity (`portfolioTeam`)  
 ✅ **Testimonials Section** — Marquee with responsive card widths, aurora blobs, data from Sanity (`portfolioTestimonial`)  
 ✅ **Final CTA Section** — Full-bleed, 60-particle NetworkCanvas, embedded footer  
@@ -110,22 +110,21 @@ GROQ queries flatten Sanity types to match existing TypeScript interfaces (no tr
 - Sticky header: `sticky top-[57px] md:top-0 z-10 bg-bg-dark/90 backdrop-blur-sm` — `top-[57px]` clears the fixed navbar on mobile
 - H2: `text-2xl sm:text-3xl lg:text-4xl text-balance` so mobile doesn't orphan "of"
 - Grid: `grid-cols-1 md:grid-cols-2 lg:grid-cols-3`, sorted by `project.order`
-- Card: image area (`aspect-video`, placeholder shows 01/02/03 if no image), category badge, title, summary (`line-clamp-2`), tech pills, "View case study →"
+- Card: image area (`aspect-video`, placeholder shows 01/02/03 if no image), category badge, title, summary (`line-clamp-2`), tech pills, and a rounded **"Visit this site"** pill button (`rounded-full`, opens `liveUrl` in a new tab)
+- Hover (the card is a `group`): lifts (`hover:-translate-y-1.5`) + blue glow (`hover:shadow-teal-glow-lg`), cover image zooms (`group-hover:scale-105`), a bottom gradient overlay fades in, and the button fills solid accent (`group-hover:bg-accent-500 group-hover:text-white`) with the ↗ arrow nudging
 - Animations: `whileInView once:true`, stagger `(index % 3) * 0.12`
 - Data: receives `projects: Project[]` prop from `HomePageClient` (fetched from Sanity in `app/page.tsx`)
 
-### ProcessTimelineSection.tsx ⭐⭐
-- Uses GSAP ScrollTrigger; **scroller is breakpoint-aware**:
-  ```typescript
-  const isDesktop = window.matchMedia('(min-width: 768px)').matches;
-  const scroller = isDesktop ? sectionRef.current : window;
-  ```
-  On desktop the section is the internal scroller; on mobile the section flows naturally and GSAP listens to window scroll.
-- Section className: `md:h-[100dvh] md:overflow-y-auto` (inline style removed) — internal scroll is desktop-only
-- `scrollPanelRef` prop — passed through so `useSnapScroll`'s edge-detection still sees the section as the scroll target on desktop
-- `paddingBottom: '50vh'` on inner container so last step scrolls into view (creates ~400px dead space on mobile — known minor issue)
-- Sticky dot grid: `sticky top-0 h-[100dvh]` + `marginBottom: -100dvh` (works on both window scroll and section scroll)
-- **Critical cleanup**: `ScrollTrigger.getAll().forEach(t => t.kill())` + `ScrollTrigger.defaults({ scroller: undefined })` in `useEffect` return
+### ProcessTimelineSection.tsx ⭐⭐ (section 3 — sticky split scrollytelling)
+Rebuilt June 2026 — the GSAP alternating timeline was replaced with a two-column scrollytelling layout, and **GSAP was removed from the project entirely** (file name kept for stability).
+- **Desktop**: a sticky left rail (`md:sticky md:top-0 md:h-[100dvh]`) lists all 7 steps with the active one highlighted (accent number + growing accent line) plus a progress bar and `0X / 07` counter. The right column is a stack of full-height detail panels (`md:min-h-[70vh]`) — large ghosted number, big title, description; non-active panels dim to `opacity: 0.35`.
+- **Wide layout / sizing**: full-bleed grid (`max-w-none`, `px-6 lg:px-16 2xl:px-24`) with a large gutter between the columns (`md:gap-20 lg:gap-40 xl:gap-56`); detail copy is `max-w-4xl`. Type scale: number `text-7xl md:text-8xl lg:text-9xl`, title `text-4xl md:text-5xl lg:text-6xl`, description `text-xl md:text-2xl`.
+- **Active-step tracking**: one `IntersectionObserver` with a zero-height center band (`rootMargin: '-50% 0px -50% 0px'`, `threshold: 0`) so exactly one panel crosses the center line at a time → sets `activeStep`. The observer **root is breakpoint-aware** (`desktop ? section : null`) and is rebuilt on a `matchMedia('(min-width: 768px)')` change listener.
+- **Rail nav is clickable**: `goToStep(i)` runs `scrollIntoView({ behavior: 'smooth', block: 'center' })` on the matching panel.
+- **Mobile**: the rail collapses to just the heading (nav + progress hidden); the 7 panels stack as naturally-flowing cards with `border-t` dividers. An `isDesktop` state (default `false`) gates the dim so mobile shows all panels at full opacity and there is no hydration mismatch.
+- `scrollPanelRef` is still wired (assigned alongside `sectionRef` in the ref callback) so `useSnapScroll`'s edge-detection treats the section as the desktop scroll target.
+- Sticky dot grid unchanged: `sticky top-0 h-[100dvh]` + `marginBottom: -100dvh`.
+- Entrance animations: Framer Motion `whileInView` (`once: true, amount: 0.4`) per panel.
 
 ### SnapScrollContainer.tsx ⭐⭐
 - `INTERNAL_SCROLL_INDICES = [3, 4]` — panels at these indices get `overflow: auto`; all others `overflow: hidden`
@@ -249,10 +248,12 @@ components/ui/Navbar.tsx                             # visible prop, goTo(), nav
 components/ui/NetworkCanvas.tsx                      # Configurable canvas particle system
 components/ui/DotGridBackground.tsx                  # CSS dot grid pulse
 components/ui/AuroraBackground.tsx                   # Framer Motion aurora blobs
+components/LenisProvider.tsx                         # Mobile-only Lenis smooth scroll (no-op on desktop — snap-scroll owns the wheel)
+lib/lenis.ts                                         # Lenis config (duration 1.4, lerp 0.08, smoothWheel)
 components/sections/IntroSplashSection.tsx           # Section 0 — one-shot typewriter
 components/sections/HeroSection.tsx                  # Section 1 — energetic 120-particle canvas
 components/sections/ServicesSection.tsx              # Section 2 — tech icon grid
-components/sections/ProcessTimelineSection.tsx       # Section 3 — GSAP, internally scrollable
+components/sections/ProcessTimelineSection.tsx       # Section 3 — sticky split scrollytelling (IntersectionObserver), internally scrollable
 components/sections/PortfolioSection.tsx             # Section 4 — 3-col card grid, internally scrollable, projects prop
 components/sections/TeamSection.tsx                  # Section 5 — team prop
 components/sections/TestimonialsSection.tsx          # Section 6 — testimonials prop
@@ -269,7 +270,7 @@ public/icons/shopify.svg                             # Custom Shopify icon
 | 0 | IntroSplashSection | hidden | Navbar hidden (`visible={currentIndex > 0}`) |
 | 1 | HeroSection | hidden | |
 | 2 | ServicesSection | hidden | |
-| 3 | ProcessTimelineSection | **auto** | GSAP scroller = section element |
+| 3 | ProcessTimelineSection | **auto** | IntersectionObserver root = section element; sticky split scrollytelling |
 | 4 | PortfolioSection | **auto** | scrollPanelRef, same escape pattern |
 | 5 | TeamSection | hidden | |
 | 6 | TestimonialsSection | hidden | |
@@ -279,7 +280,7 @@ public/icons/shopify.svg                             # Custom Shopify icon
 
 - **All sections use `min-h-[100dvh] md:h-full`** — on desktop they live inside SnapScrollContainer's `100dvh` panels (so `h-full` resolves to 100dvh). On mobile they have no defined parent height, so `min-h-[100dvh]` ensures each section is at least one viewport tall and can grow with content.
 - **Sections 3 & 4 drop internal-scroll on mobile**: their `100dvh + overflow-y: auto` is gated behind `md:` so on mobile they flow naturally (otherwise users would only see one timeline step or one portfolio card with no indication to scroll inside).
-- **ProcessTimelineSection GSAP** picks scroller by breakpoint: `isDesktop ? section : window`. Desktop = section is the scroller; mobile = window scrolls naturally and GSAP listens to it.
+- **ProcessTimelineSection** picks its IntersectionObserver root by breakpoint: `desktop ? section : null` (window). Desktop = section is the scroll container; mobile = window scrolls naturally and the observer watches it.
 - **Sticky headers** that should sit below the fixed navbar on mobile use `sticky top-[57px] md:top-0` (PortfolioSection's "Our Work" header).
 
 ## Known Issues & Fixes
@@ -287,7 +288,7 @@ public/icons/shopify.svg                             # Custom Shopify icon
 | Issue | Fix |
 |-------|-----|
 | Hydration mismatch | No `Math.random()` in render/module scope; canvas/random OK in `useEffect` only |
-| Timeline not animating | Register ScrollTrigger; `ScrollTrigger.defaults({ scroller })`; cleanup in `useEffect` return |
+| Process active-step not updating | IntersectionObserver needs a center band (`rootMargin: '-50% 0px -50% 0px'`) + breakpoint-aware root (`desktop ? section : null`); rebuild the observer on `matchMedia` change |
 | Timeline wheel scroll not working | Check scroll position BEFORE `preventDefault()` to allow internal scroll |
 | Dot grid scrolls away in ProcessTimeline | Sticky wrapper: `sticky top-0 h-[100dvh]` + `marginBottom: -100dvh` |
 | Sections clipped at bottom | Navbar is `fixed` (not `sticky`) so sections get full `100dvh` |
@@ -298,7 +299,7 @@ public/icons/shopify.svg                             # Custom Shopify icon
 | Sanity image not showing | Upload via Studio image field. URL is served from `cdn.sanity.io` — whitelisted in `next.config.mjs`. GROQ query uses `image.asset->url` projection |
 | Splash compressed to top on mobile / sections overlap | Fix: `min-h-[100dvh] md:h-full` on sections |
 | Only one Process step / one Portfolio card visible on mobile | Fix: `md:h-[100dvh] md:overflow-y-auto` — drops internal scroller on mobile |
-| Process timeline GSAP cards never appear on mobile | Fix: `scroller = isDesktop ? section : window` |
+| Process panels: active-dim wrong / flickers on mobile | `isDesktop` state (default `false`) gates the `opacity: 0.35` dim so mobile shows all panels full-opacity and SSR matches first client render |
 | Testimonial cards wider than viewport on mobile (cut off) | Fix: responsive card width via state, `scrollDistance` recomputed from current width |
 | Sticky section headers covered by fixed navbar on mobile | Fix: `sticky top-[57px] md:top-0` |
 | Tech icon brand colors blend into dark bg | Fix: wrap each icon in `bg-neutral-900/50 border` tile |
@@ -309,6 +310,7 @@ public/icons/shopify.svg                             # Custom Shopify icon
 | Studio shows "Tool not found: studio" | `basePath: '/studio'` was missing from `sanity.config.ts` — must match the route where Studio is mounted |
 | Studio CORS error on localhost | Add `http://localhost:3000` (with credentials) to CORS Origins in sanity.io/manage → project → API tab |
 | Studio changes not reflecting on live site | `useCdn: true` serves stale CDN data; fix is `useCdn: false` + `next: { revalidate: 60 }` on all fetches |
+| Desktop has no Lenis smooth scroll | Intentional: `useSnapScroll` hijacks the wheel on desktop, so `LenisProvider` returns early at `min-width: 768px`. Lenis runs on mobile only. (GSAP was never the blocker — the snap wheel handler is.) |
 
 ## Animation Guidelines
 
@@ -332,7 +334,7 @@ public/icons/shopify.svg                             # Custom Shopify icon
 ## Installation & Quick Start
 
 ```bash
-npm install        # Includes gsap, tech-stack-icons, @sanity/client, next-sanity
+npm install        # Includes tech-stack-icons, @sanity/client, next-sanity, lenis
 npm run dev        # Dev server on :3000
 npm run build
 npm run start
@@ -344,12 +346,12 @@ No `.env.local` required for public reads — Sanity dataset is public.
 
 - Flesh out `/app/work/[slug]/` with project-specific content (use Sanity `description` and additional fields)
 - Contact form with server action + email (Resend / Nodemailer)
-- ProcessTimeline SVG redesign: branching connector lines, animated `strokeDashoffset`
+- ProcessTimeline: optional auto-advance / "play" mode, or per-step icons/illustrations in the detail panels
 - Sanity webhook → Vercel Deploy Hook for automatic redeploys on content publish (ISR already handles ~60s updates; webhook would make it instant)
 
 ---
 
-**Last Updated**: May 2026 (ISR + security hardening — Sanity CDN bypass, revalidation, security headers)  
+**Last Updated**: June 2026 (Process section rebuilt as sticky split scrollytelling + GSAP removed; Portfolio cards gained hover lift/glow/zoom and a "Visit this site" button)  
 **Dark Theme (Navy + Electric Blue)**: ✅  
 **Animated Backgrounds**: ✅ (dot grid, aurora blobs, network canvas)  
 **Full-Page Snap Scroll**: ✅ (sections 3 & 4 internally scrollable via `internalScrollSections[]`)  

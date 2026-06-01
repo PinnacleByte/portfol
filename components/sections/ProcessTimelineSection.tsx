@@ -1,12 +1,8 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
-import gsap from 'gsap';
-import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import SectionHeading from '@/components/ui/SectionHeading';
+import { useEffect, useRef, useState } from 'react';
+import { motion } from 'framer-motion';
 import DotGridBackground from '@/components/ui/DotGridBackground';
-
-gsap.registerPlugin(ScrollTrigger);
 
 interface ProcessTimelineSectionProps {
   scrollPanelRef?: React.RefObject<HTMLDivElement | null>;
@@ -15,105 +11,89 @@ interface ProcessTimelineSectionProps {
 const steps = [
   {
     title: 'Discovery Call',
-    description: 'We understand your vision, goals, and technical requirements. This is where clarity begins.'
+    description:
+      'We dig into your vision, goals, and constraints — and walk away with a razor-sharp brief everyone is aligned on.'
   },
   {
     title: 'Research & Strategy',
-    description: 'Deep competitive analysis and strategic planning to position your product for success.'
+    description:
+      'Competitor teardowns and market signals shape a strategy built to position you to win, not just ship.'
   },
   {
     title: 'Design & Prototyping',
-    description: 'Crafting beautiful, intuitive designs that translate your vision into interactive experiences.'
+    description:
+      'Interactive, pixel-considered prototypes turn the strategy into something you can click, feel, and refine.'
   },
   {
     title: 'Development',
-    description: 'Building robust, scalable code with performance and maintainability as core principles.'
+    description:
+      'Clean, scalable code built for speed and longevity — no shortcuts that come back to bite you in six months.'
   },
   {
     title: 'Testing & Optimization',
-    description: 'Rigorous testing and optimization to ensure every pixel and millisecond performs.'
+    description:
+      'We stress-test across devices and chase every millisecond until it is fast, accessible, and bulletproof.'
   },
   {
     title: 'Handoff & Enablement',
-    description: 'Smooth transition with comprehensive documentation and team training.'
+    description:
+      'Clear documentation and hands-on training so your team owns the product with total confidence.'
   },
   {
     title: 'Partnership & Growth',
-    description: 'Ongoing support and optimization as your digital product scales.'
+    description:
+      'We stay in your corner — monitoring, iterating, and scaling as your product and audience grow.'
   }
 ];
 
 export default function ProcessTimelineSection({ scrollPanelRef }: ProcessTimelineSectionProps) {
   const sectionRef = useRef<HTMLDivElement>(null);
-  const timelineRef = useRef<HTMLDivElement>(null);
+  const [activeStep, setActiveStep] = useState(0);
+  const [isDesktop, setIsDesktop] = useState(false);
 
   useEffect(() => {
     const section = sectionRef.current;
-    const timeline = timelineRef.current;
-    if (!section || !timeline) return;
+    if (!section) return;
 
-    const cards = timeline.querySelectorAll('.timeline-card');
-    const progressLine = timeline.querySelector('.progress-line') as HTMLElement;
+    const mq = window.matchMedia('(min-width: 768px)');
+    let observer: IntersectionObserver | null = null;
 
-    // Desktop snap-scroll: section is the scroller. Mobile: window scrolls naturally.
-    const isDesktop = window.matchMedia('(min-width: 768px)').matches;
-    const scroller = isDesktop ? section : window;
+    // Rebuild the observer whenever we cross the desktop/mobile breakpoint —
+    // desktop scrolls inside the section (root = section), mobile uses the window (root = null).
+    const build = () => {
+      observer?.disconnect();
+      const desktop = mq.matches;
+      setIsDesktop(desktop);
 
-    ScrollTrigger.defaults({ scroller });
-
-    cards.forEach((card) => {
-      gsap.fromTo(
-        card,
-        { opacity: 0, y: 60, scale: 0.9 },
-        {
-          opacity: 1,
-          y: 0,
-          scale: 1,
-          duration: 0.8,
-          ease: 'power2.out',
-          scrollTrigger: {
-            trigger: card,
-            scroller,
-            start: 'top 80%',
-            end: 'top 30%',
-            scrub: 0.5,
-            markers: false
-          }
-        }
+      observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (!entry.isIntersecting) return;
+            const idx = Number((entry.target as HTMLElement).dataset.stepIndex);
+            if (!Number.isNaN(idx)) setActiveStep(idx);
+          });
+        },
+        // A zero-height band at the vertical center: exactly one block crosses it at a time.
+        { root: desktop ? section : null, rootMargin: '-50% 0px -50% 0px', threshold: 0 }
       );
 
-      gsap.to(card, {
-        borderColor: 'rgba(59, 130, 246, 0.6)',
-        duration: 0.4,
-        scrollTrigger: {
-          trigger: card,
-          scroller,
-          start: 'top 50%',
-          end: 'bottom 50%',
-          scrub: true,
-          markers: false
-        }
-      });
-    });
+      section.querySelectorAll('[data-step-index]').forEach((el) => observer!.observe(el));
+    };
 
-    gsap.to(progressLine, {
-      height: '100%',
-      ease: 'none',
-      scrollTrigger: {
-        trigger: timeline,
-        scroller,
-        start: 'top 30%',
-        end: 'bottom 30%',
-        scrub: 1,
-        markers: false
-      }
-    });
+    build();
+    mq.addEventListener('change', build);
 
     return () => {
-      ScrollTrigger.getAll().forEach(trigger => trigger.kill());
-      ScrollTrigger.defaults({ scroller: undefined });
+      mq.removeEventListener('change', build);
+      observer?.disconnect();
     };
   }, []);
+
+  const goToStep = (i: number) => {
+    sectionRef.current
+      ?.querySelector(`[data-step-index="${i}"]`)
+      ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  };
 
   return (
     <section
@@ -128,7 +108,7 @@ export default function ProcessTimelineSection({ scrollPanelRef }: ProcessTimeli
       }}
       className="relative bg-bg-dark md:h-[100dvh] md:overflow-y-auto"
     >
-      {/* Sticky dot grid — stays in view while timeline content scrolls */}
+      {/* Sticky dot grid — stays in view while the content scrolls */}
       <div
         className="sticky top-0 overflow-hidden pointer-events-none"
         style={{ height: '100dvh', marginBottom: '-100dvh' }}
@@ -137,59 +117,104 @@ export default function ProcessTimelineSection({ scrollPanelRef }: ProcessTimeli
         <DotGridBackground />
       </div>
 
-      <div className="container space-y-16 py-20 md:py-32" style={{ paddingBottom: '50vh' }}>
-        <SectionHeading
-          eyebrow="Our process"
-          title="A thoughtful, premium process that keeps every project aligned."
-          description="Each phase is carefully orchestrated to deliver clarity, momentum, and exceptional results."
-        />
+      <div className="relative mx-auto max-w-none px-6 lg:px-16 2xl:px-24">
+        <div className="md:grid md:grid-cols-[18rem_minmax(0,1fr)] lg:grid-cols-[22rem_minmax(0,1fr)] md:gap-20 lg:gap-40 xl:gap-56">
+          {/* ───────── Left rail (sticky on desktop) ───────── */}
+          <div className="py-16 md:py-0 md:sticky md:top-0 md:h-[100dvh] md:flex md:flex-col md:justify-center">
+            <p className="text-xs font-semibold tracking-widest text-accent-400 uppercase mb-3">
+              Our process
+            </p>
+            <h2 className="text-3xl lg:text-4xl font-black text-primary-50 text-balance">
+              From first call to lasting partnership.
+            </h2>
+            <p className="hidden md:block text-base text-primary-400 mt-4 leading-relaxed">
+              Seven deliberate phases that keep every project aligned, on time, and unmistakably premium.
+            </p>
 
-        <div ref={timelineRef} className="relative">
-          {/* Vertical timeline track */}
-          <div className="absolute left-0 md:left-1/2 top-0 bottom-0 w-0.5 md:w-1 bg-neutral-700 md:-translate-x-1/2">
-            <div
-              className="progress-line absolute left-0 top-0 w-full bg-gradient-to-b from-accent-500 to-accent-400 origin-top"
-              style={{ height: '0%' }}
-            />
+            {/* Step nav — desktop only (blocks themselves carry the content on mobile) */}
+            <nav className="hidden md:block mt-10">
+              {steps.map((step, i) => {
+                const active = i === activeStep;
+                return (
+                  <button
+                    key={step.title}
+                    onClick={() => goToStep(i)}
+                    aria-current={active ? 'step' : undefined}
+                    className="group flex w-full items-center gap-4 py-2 text-left"
+                  >
+                    <span
+                      className={`text-xs font-mono tabular-nums transition-colors duration-300 ${
+                        active ? 'text-accent-400' : 'text-primary-600'
+                      }`}
+                    >
+                      {String(i + 1).padStart(2, '0')}
+                    </span>
+                    <span
+                      className={`h-px transition-all duration-300 ${
+                        active
+                          ? 'w-8 bg-accent-500'
+                          : 'w-3 bg-primary-700 group-hover:w-5 group-hover:bg-primary-500'
+                      }`}
+                    />
+                    <span
+                      className={`text-sm font-medium transition-colors duration-300 ${
+                        active ? 'text-primary-50' : 'text-primary-500 group-hover:text-primary-300'
+                      }`}
+                    >
+                      {step.title}
+                    </span>
+                  </button>
+                );
+              })}
+            </nav>
+
+            {/* Progress bar — desktop only */}
+            <div className="hidden md:flex items-center gap-4 mt-10">
+              <div className="h-1 flex-1 rounded-full bg-neutral-800 overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-accent-500 to-accent-400 transition-all duration-500 ease-out"
+                  style={{ width: `${((activeStep + 1) / steps.length) * 100}%` }}
+                />
+              </div>
+              <span className="text-xs font-mono tabular-nums text-primary-400">
+                {String(activeStep + 1).padStart(2, '0')} / {String(steps.length).padStart(2, '0')}
+              </span>
+            </div>
           </div>
 
-          {/* Timeline steps */}
-          <div className="space-y-12 md:space-y-16 relative">
-            {steps.map((step, index) => (
-              <div
-                key={step.title}
-                className="timeline-card group"
-              >
-                <div className="flex gap-8 md:gap-12 items-start">
-                  {/* Left side - content (alternates on desktop) */}
-                  <div className={`flex-1 ${index % 2 === 0 ? 'md:pr-12 md:text-right' : 'md:col-start-2 md:pl-12'}`}>
-                    {/* Mobile and left-side number */}
-                    <div className="flex items-center gap-4 md:hidden mb-4">
-                      <div className="relative z-10 flex h-10 w-10 items-center justify-center rounded-full border-2 border-accent-500 bg-bg-dark text-accent-400 font-semibold text-sm shrink-0 shadow-teal-glow">
-                        {index + 1}
-                      </div>
-                    </div>
-
-                    {/* Card */}
-                    <div className="rounded-2xl border border-neutral-700 bg-neutral-900/50 backdrop-blur-sm p-6 md:p-8 transition-all duration-300 hover:border-accent-500/50 hover:shadow-teal-glow">
-                      <h3 className="text-2xl md:text-3xl font-semibold text-primary-50 mb-3">
-                        {step.title}
-                      </h3>
-                      <p className="text-base md:text-lg text-primary-300 leading-relaxed">
-                        {step.description}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Center marker (desktop only) */}
-                  <div className="hidden md:flex absolute left-1/2 transform -translate-x-1/2 z-20 items-center justify-center">
-                    <div className="relative flex h-14 w-14 items-center justify-center rounded-full border-3 border-accent-500 bg-bg-dark font-bold text-accent-400 text-lg shadow-teal-glow-lg group-hover:scale-110 transition-transform duration-300">
-                      {index + 1}
-                    </div>
-                  </div>
+          {/* ───────── Right detail blocks (scroll driver) ───────── */}
+          <div className="pb-24 md:pb-0">
+            {steps.map((step, i) => {
+              const active = i === activeStep;
+              return (
+                <div
+                  key={step.title}
+                  data-step-index={i}
+                  className="step-trigger flex items-center border-t border-neutral-800/60 first:border-t-0 py-12 md:min-h-[70vh] md:border-t-0 md:py-0"
+                  style={{
+                    opacity: isDesktop && !active ? 0.35 : 1,
+                    transition: 'opacity 0.4s ease'
+                  }}
+                >
+                  <motion.div
+                    initial={{ opacity: 0, y: 24 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true, amount: 0.4 }}
+                    transition={{ duration: 0.6, ease: 'easeOut' }}
+                  >
+                    <span className="block text-7xl md:text-8xl lg:text-9xl font-black leading-none text-accent-500/20 mb-6">
+                      {String(i + 1).padStart(2, '0')}
+                    </span>
+                    <h3 className="text-4xl md:text-5xl lg:text-6xl font-bold text-primary-50 mb-6 text-balance">
+                      {step.title}
+                    </h3>
+                    <p className="text-xl md:text-2xl text-primary-300 leading-relaxed max-w-4xl">
+                      {step.description}
+                    </p>
+                  </motion.div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </div>
