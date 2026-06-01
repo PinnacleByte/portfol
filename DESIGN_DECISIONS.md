@@ -25,7 +25,7 @@ All animations use Framer Motion. The guiding principle: **reveal, don't just ap
 - **Spring physics on icons**: `type: 'spring', stiffness: 220, damping: 18` gives tech icons a natural, bouncy settle — subtle but tactile.
 - **Cubic-bezier `[0.25, 0.4, 0.55, 1]`** on text reveals: accelerates quickly then eases gently, giving a snappy but not jarring feel.
 - **Load vs scroll animations**: HeroSection uses `animate` (fires on mount). All other sections use `whileInView` with `once: true` (fires once when the section slides into the snap viewport).
-- **GSAP ScrollTrigger** is reserved for ProcessTimelineSection only — it needs scroll-position-synchronised card reveals that Framer Motion `whileInView` cannot handle precisely.
+- **Scroll-driven reveals** (ProcessTimelineSection): an `IntersectionObserver` detects which step is centered and replays a word-by-word title reveal + drawing accent underline as you scroll. GSAP was removed — Framer Motion `variants` plus the observer cover everything the old ScrollTrigger timeline did.
 
 ## Navbar Architecture
 
@@ -43,7 +43,7 @@ Two-column grid (`lg:grid-cols-2`) on desktop: text content left, illustration r
 
 Desktop-only. All sections live in the DOM simultaneously (no mount/unmount). Framer Motion translates the inner stack by `-currentIndex * 100dvh`. Benefits:
 
-- GSAP ScrollTrigger in ProcessTimelineSection can register once and persist (no re-registration on nav)
+- ProcessTimelineSection's `IntersectionObserver` registers once and persists (no re-init when navigating away and back)
 - Carousel state is preserved when navigating away and back
 - Section animations using `whileInView` fire naturally when the panel translates into the viewport
 
@@ -61,9 +61,9 @@ On desktop, each section is wrapped in a 100dvh panel inside SnapScrollContainer
 
 ProcessTimeline and Portfolio are 100dvh internal scrollers on desktop — the snap-scroll system relies on this to detect edge escapes. On mobile, the same pattern would mean users only ever see one timeline step or one portfolio card before having to discover an internal scroll gesture. So the inline `height: 100dvh; overflow-y: auto` was replaced with `md:h-[100dvh] md:overflow-y-auto` — desktop keeps the internal scroller, mobile flows naturally.
 
-**GSAP scroller selection follows the section**
+**Observer root follows the section**
 
-`ProcessTimelineSection` uses GSAP ScrollTrigger to animate timeline cards in. The scroller has to match whatever is actually scrolling: `isDesktop ? sectionRef.current : window`. Without this swap the cards stay at `opacity: 0` on mobile because GSAP is listening to a non-scrolling element.
+`ProcessTimelineSection` tracks the active (centered) step with an `IntersectionObserver`. Its root must match whatever is actually scrolling: `desktop ? sectionRef.current : null` (the window). The observer is rebuilt on a `matchMedia('(min-width: 768px)')` change so it always points at the live scroll container — without this the active step never updates on the wrong breakpoint.
 
 **Fixed navbar clearance**
 

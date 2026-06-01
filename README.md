@@ -8,7 +8,7 @@ Premium dark-themed web development studio portfolio with energetic animations a
 - **TypeScript**
 - **Tailwind CSS** — Dark Navy + Electric Blue theme
 - **Framer Motion** — entrance animations, aurora backgrounds, full-page snap scroll
-- **GSAP + ScrollTrigger** — ProcessTimeline scroll-synchronised animations
+- **Lenis** — smooth scroll on mobile; the Process section reveals via an `IntersectionObserver` scrollytelling pattern (no GSAP)
 - **Canvas** — NetworkCanvas particle system with animated connectors
 - **Sanity v3** — hosted CMS, Studio embedded at `/studio`
 
@@ -77,7 +77,7 @@ components/
     IntroSplashSection.tsx          # Section 0 — NetworkCanvas + one-shot typewriter
     HeroSection.tsx                 # Section 1 — 120-particle canvas, blur-reveal headline
     ServicesSection.tsx             # Section 2 — Tech icon grid, dot grid background
-    ProcessTimelineSection.tsx      # Section 3 — GSAP ScrollTrigger, internally scrollable
+    ProcessTimelineSection.tsx      # Section 3 — sticky split scrollytelling (IntersectionObserver), internally scrollable
     PortfolioSection.tsx            # Section 4 — 3-col card grid, internally scrollable, projects prop
     TeamSection.tsx                 # Section 5 — Aurora background, team prop
     TestimonialsSection.tsx         # Section 6 — Marquee, aurora background, testimonials prop
@@ -112,8 +112,8 @@ types/
 | 0 | IntroSplashSection | Network Graph | Cinematic intro, navbar hidden |
 | 1 | HeroSection | Network Graph (enhanced) | 120 particles, rotating typewriter eyebrow |
 | 2 | ServicesSection | Dot Grid Pulse | Tech icon grid |
-| 3 | ProcessTimelineSection | Dot Grid Pulse (sticky) | GSAP, internally scrollable |
-| 4 | PortfolioSection | — | 3-col card grid, internally scrollable, Sanity data |
+| 3 | ProcessTimelineSection | Dot Grid Pulse (sticky) | Sticky split scrollytelling, internally scrollable |
+| 4 | PortfolioSection | — | 3-col card grid (hover lift/glow + "Visit this site" button), internally scrollable, Sanity data |
 | 5 | TeamSection | Aurora Blobs | Sanity data |
 | 6 | TestimonialsSection | Aurora Blobs | Marquee, Sanity data |
 | 7 | FinalCtaSection | Network Graph | CTA + embedded footer |
@@ -141,7 +141,7 @@ The breakpoint is `min-width: 768px`.
 | Layout | SnapScrollContainer — 100dvh panels | Plain stacked sections |
 | Section height | `h-full` resolves to 100dvh | `min-h-[100dvh]` |
 | Process & Portfolio scroll | Internal scroller (`md:h-[100dvh] md:overflow-y-auto`) | Natural flow |
-| GSAP scroller | Section element | `window` |
+| Process active-step observer | root = section element | root = `window` (`null`) |
 
 ## Deployment (Vercel)
 
