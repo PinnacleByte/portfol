@@ -26,6 +26,7 @@ All animations use Framer Motion. The guiding principle: **reveal, don't just ap
 - **Cubic-bezier `[0.25, 0.4, 0.55, 1]`** on text reveals: accelerates quickly then eases gently, giving a snappy but not jarring feel.
 - **Load vs scroll animations**: HeroSection uses `animate` (fires on mount). All other sections use `whileInView` with `once: true` (fires once when the section slides into the snap viewport).
 - **Scroll-driven reveals** (ProcessTimelineSection): an `IntersectionObserver` detects which step is centered and replays a word-by-word title reveal + drawing accent underline as you scroll. GSAP was removed — Framer Motion `variants` plus the observer cover everything the old ScrollTrigger timeline did.
+- **No `scale` on large text**: the Process step numbers are gradient-filled (`bg-clip-text`) and spring in via `translateY` only. Animating `scale` on huge text makes the browser rasterize the glyph and stretch the bitmap, so it goes blurry mid-animation — translateY (and opacity) keeps it razor-sharp.
 
 ## Navbar Architecture
 
@@ -48,6 +49,10 @@ Desktop-only. All sections live in the DOM simultaneously (no mount/unmount). Fr
 - Section animations using `whileInView` fire naturally when the panel translates into the viewport
 
 The trade-off: all section JS runs immediately. This is acceptable for a portfolio with 7 sections.
+
+## Nested Snap Inside Process
+
+The Process section (an internal scroller) additionally uses **native CSS scroll-snap** (`scroll-snap-type: y mandatory`), with each step a full-viewport `scroll-snap-align: start` block — so scrolling within it snaps step-by-step, a snap-scroll nested inside the outer page snap-scroll. Native CSS was chosen over a second JS wheel handler specifically so it doesn't fight the outer `useSnapScroll` wheel handler. Full-viewport `snap-start` steps also keep the outer edge-escape working (`scrollTop: 0` = first step, the last step's snap = max scroll, so the existing atTop/atBottom detection still fires). The trade-off: CSS scroll-snap has no duration knob, so the snap glide speed is browser-controlled — a tunable/slower snap would require a JS wheel-driven implementation.
 
 ## Mobile Responsive Strategy
 

@@ -42,7 +42,7 @@ app/
 | `IntroSplashSection.tsx` | 0 — Intro Splash | One-shot typewriter, NetworkCanvas, navbar hidden |
 | `HeroSection.tsx` | 1 — Hero | 120-particle canvas, rotating typewriter eyebrow, word-by-word blur reveal |
 | `ServicesSection.tsx` | 2 — Services | Tech icon grid (tech-stack-icons npm), dot grid background |
-| `ProcessTimelineSection.tsx` | 3 — Process | Sticky split scrollytelling (IntersectionObserver), internally scrollable, sticky dot grid |
+| `ProcessTimelineSection.tsx` | 3 — Process | Sticky split scrollytelling (IntersectionObserver), internally scrollable w/ nested CSS snap, sticky dot grid |
 | `PortfolioSection.tsx` | 4 — Portfolio | 3-col card grid w/ hover lift/glow + "Visit this site" button, internally scrollable. Receives `projects: Project[]` prop. |
 | `TeamSection.tsx` | 5 — Team | Aurora background. Receives `team: TeamMember[]` prop. |
 | `TestimonialsSection.tsx` | 6 — Testimonials | Marquee, aurora background. Receives `testimonials: Testimonial[]` prop. |

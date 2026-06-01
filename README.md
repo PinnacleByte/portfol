@@ -112,7 +112,7 @@ types/
 | 0 | IntroSplashSection | Network Graph | Cinematic intro, navbar hidden |
 | 1 | HeroSection | Network Graph (enhanced) | 120 particles, rotating typewriter eyebrow |
 | 2 | ServicesSection | Dot Grid Pulse | Tech icon grid |
-| 3 | ProcessTimelineSection | Dot Grid Pulse (sticky) | Sticky split scrollytelling, internally scrollable |
+| 3 | ProcessTimelineSection | Dot Grid Pulse (sticky) | Sticky split scrollytelling, internally scrollable w/ nested snap |
 | 4 | PortfolioSection | — | 3-col card grid (hover lift/glow + "Visit this site" button), internally scrollable, Sanity data |
 | 5 | TeamSection | Aurora Blobs | Sanity data |
 | 6 | TestimonialsSection | Aurora Blobs | Marquee, Sanity data |
@@ -131,6 +131,8 @@ useSnapScroll({
   ],
 });
 ```
+
+Within section 3 (Process), each step is *additionally* a CSS scroll-snap point — the section uses `scroll-snap-type: y mandatory` and each step is a full-viewport `scroll-snap-align: start` block. So scrolling *inside* Process snaps step-by-step: a snap-scroll nested inside the outer page snap-scroll. Native CSS was used (not a second JS wheel handler) so it doesn't fight `useSnapScroll`. Full-viewport `snap-start` steps also keep the outer edge-escape working (`scrollTop: 0` = first step, last step's snap = max scroll).
 
 ## Mobile vs Desktop Layout
 

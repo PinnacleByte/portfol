@@ -272,7 +272,7 @@ public/icons/shopify.svg                             # Custom Shopify icon
 | 0 | IntroSplashSection | hidden | Navbar hidden (`visible={currentIndex > 0}`) |
 | 1 | HeroSection | hidden | |
 | 2 | ServicesSection | hidden | |
-| 3 | ProcessTimelineSection | **auto** | IntersectionObserver root = section element; sticky split scrollytelling |
+| 3 | ProcessTimelineSection | **auto** | IntersectionObserver root = section element; sticky split scrollytelling; **nested snap-scroll** (`snap-y mandatory`, full-viewport `snap-start` steps) |
 | 4 | PortfolioSection | **auto** | scrollPanelRef, same escape pattern |
 | 5 | TeamSection | hidden | |
 | 6 | TestimonialsSection | hidden | |
@@ -301,7 +301,9 @@ public/icons/shopify.svg                             # Custom Shopify icon
 | Sanity image not showing | Upload via Studio image field. URL is served from `cdn.sanity.io` — whitelisted in `next.config.mjs`. GROQ query uses `image.asset->url` projection |
 | Splash compressed to top on mobile / sections overlap | Fix: `min-h-[100dvh] md:h-full` on sections |
 | Only one Process step / one Portfolio card visible on mobile | Fix: `md:h-[100dvh] md:overflow-y-auto` — drops internal scroller on mobile |
-| Process panels: active-dim wrong / flickers on mobile | `isDesktop` state (default `false`) gates the `opacity: 0.35` dim so mobile shows all panels full-opacity and SSR matches first client render |
+| Process panels: reveal wrong / cards hidden on mobile | `isDesktop` state (default `false`) selects the trigger — desktop replays the reveal off `active`, mobile uses `whileInView once` so stacked cards reveal and stay (avoids hiding non-active cards + SSR hydration mismatch) |
+| Big number/text blurs mid-animation | Animating `scale` on large text rasterizes the glyph and stretches the bitmap → blur during the transform. Animate `translateY`/opacity instead; keep `scale` off huge text |
+| Nested snap traps Process (can't escape to next section) | Make steps full-viewport `snap-start` so `scrollTop: 0` = first step and the last step's snap = max scroll → `useSnapScroll` still detects atTop/atBottom. If `snap-mandatory` feels too sticky, use `snap-proximity` |
 | Testimonial cards wider than viewport on mobile (cut off) | Fix: responsive card width via state, `scrollDistance` recomputed from current width |
 | Sticky section headers covered by fixed navbar on mobile | Fix: `sticky top-[57px] md:top-0` |
 | Tech icon brand colors blend into dark bg | Fix: wrap each icon in `bg-neutral-900/50 border` tile |
@@ -353,7 +355,7 @@ No `.env.local` required for public reads — Sanity dataset is public.
 
 ---
 
-**Last Updated**: June 2026 (Process section rebuilt as sticky split scrollytelling + GSAP removed; Portfolio cards gained hover lift/glow/zoom and a "Visit this site" button)  
+**Last Updated**: June 2026 (Process: sticky split scrollytelling + GSAP removed, word-by-word reveal, gradient/spring step numbers, nested CSS snap-scroll; Portfolio: hover lift/glow/zoom + "Visit this site" button)  
 **Dark Theme (Navy + Electric Blue)**: ✅  
 **Animated Backgrounds**: ✅ (dot grid, aurora blobs, network canvas)  
 **Full-Page Snap Scroll**: ✅ (sections 3 & 4 internally scrollable via `internalScrollSections[]`)  
