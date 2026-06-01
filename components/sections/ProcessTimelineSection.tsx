@@ -57,6 +57,13 @@ const fadeUp: Variants = {
   visible: { opacity: 1, y: 0, filter: 'blur(0px)', transition: { duration: 0.5, ease: 'easeOut' } }
 };
 
+// Number entrance — a visible spring rise with a little overshoot/bounce.
+// translateY only (no scale) so the big gradient text never rasterizes/blurs.
+const numberVariants: Variants = {
+  hidden: { opacity: 0, y: 50, transition: { duration: 0.2 } },
+  visible: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 200, damping: 12 } }
+};
+
 const titleVariants: Variants = {
   hidden: {},
   visible: { transition: { staggerChildren: 0.08 } }
@@ -100,12 +107,12 @@ function StepPanel({
   return (
     <div
       data-step-index={index}
-      className="step-trigger flex items-center border-t border-neutral-800/60 first:border-t-0 py-12 md:min-h-[70vh] md:border-t-0 md:py-0"
+      className="step-trigger flex items-center border-t border-neutral-800/60 first:border-t-0 py-12 md:h-[100dvh] md:snap-start md:border-t-0 md:py-0"
     >
       <motion.div variants={panelVariants} {...motionProps}>
         <motion.span
-          variants={fadeUp}
-          className="block text-7xl md:text-8xl lg:text-9xl font-black leading-none text-accent-500/20 mb-6 [text-shadow:0_0_30px_rgba(59,130,246,0.55),0_0_70px_rgba(59,130,246,0.30)]"
+          variants={numberVariants}
+          className="block text-7xl md:text-8xl lg:text-9xl font-black leading-none mb-6 bg-gradient-to-b from-accent-300 to-accent-600 bg-clip-text text-transparent"
         >
           {String(index + 1).padStart(2, '0')}
         </motion.span>
@@ -203,7 +210,7 @@ export default function ProcessTimelineSection({ scrollPanelRef }: ProcessTimeli
           }
         }
       }}
-      className="relative bg-bg-dark md:h-[100dvh] md:overflow-y-auto"
+      className="relative bg-bg-dark md:h-[100dvh] md:overflow-y-auto md:snap-y md:snap-mandatory"
     >
       {/* Sticky dot grid — stays in view while the content scrolls */}
       <div
