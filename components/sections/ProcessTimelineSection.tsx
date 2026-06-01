@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion, type Variants, type MotionProps } from 'framer-motion';
 import DotGridBackground from '@/components/ui/DotGridBackground';
 
 interface ProcessTimelineSectionProps {
@@ -46,10 +46,107 @@ const steps = [
   }
 ];
 
+// ── Reveal animation: title word-by-word blur-up + drawing accent underline ──
+const panelVariants: Variants = {
+  hidden: {},
+  visible: { transition: { staggerChildren: 0.08, delayChildren: 0.04 } }
+};
+
+const fadeUp: Variants = {
+  hidden: { opacity: 0, y: 20, filter: 'blur(8px)', transition: { duration: 0.25, ease: 'easeIn' } },
+  visible: { opacity: 1, y: 0, filter: 'blur(0px)', transition: { duration: 0.5, ease: 'easeOut' } }
+};
+
+const titleVariants: Variants = {
+  hidden: {},
+  visible: { transition: { staggerChildren: 0.08 } }
+};
+
+const wordVariants: Variants = {
+  hidden: { opacity: 0, y: 24, filter: 'blur(10px)', transition: { duration: 0.25 } },
+  visible: { opacity: 1, y: 0, filter: 'blur(0px)', transition: { duration: 0.55, ease: 'easeOut' } }
+};
+
+const underlineVariants: Variants = {
+  hidden: { scaleX: 0, opacity: 0, transition: { duration: 0.2 } },
+  visible: { scaleX: 1, opacity: 1, transition: { duration: 0.6, ease: 'easeOut', delay: 0.15 } }
+};
+
+function StepPanel({
+  step,
+  index,
+  active,
+  isDesktop,
+  reduceMotion
+}: {
+  step: (typeof steps)[number];
+  index: number;
+  active: boolean;
+  isDesktop: boolean;
+  reduceMotion: boolean;
+}) {
+  const words = step.title.split(' ');
+
+  // How the reveal fires:
+  // - reduced motion → no animation, content just shown
+  // - desktop → replays every time the panel becomes the centered/active step
+  // - mobile → reveals once when scrolled into view, then stays (it's a scrollable list)
+  const motionProps: MotionProps = reduceMotion
+    ? { initial: false, animate: 'visible' }
+    : isDesktop
+      ? { initial: 'hidden', animate: active ? 'visible' : 'hidden' }
+      : { initial: 'hidden', whileInView: 'visible', viewport: { once: true, amount: 0.4 } };
+
+  return (
+    <div
+      data-step-index={index}
+      className="step-trigger flex items-center border-t border-neutral-800/60 first:border-t-0 py-12 md:min-h-[70vh] md:border-t-0 md:py-0"
+    >
+      <motion.div variants={panelVariants} {...motionProps}>
+        <motion.span
+          variants={fadeUp}
+          className="block text-7xl md:text-8xl lg:text-9xl font-black leading-none text-accent-500/20 mb-6 [text-shadow:0_0_30px_rgba(59,130,246,0.55),0_0_70px_rgba(59,130,246,0.30)]"
+        >
+          {String(index + 1).padStart(2, '0')}
+        </motion.span>
+
+        <motion.h3
+          variants={titleVariants}
+          className="text-4xl md:text-5xl lg:text-6xl font-bold text-primary-50 mb-5 text-balance"
+        >
+          {words.map((word, w) => (
+            <motion.span
+              key={`${word}-${w}`}
+              variants={wordVariants}
+              className="inline-block mr-[0.25em] will-change-[transform,filter]"
+            >
+              {word}
+            </motion.span>
+          ))}
+        </motion.h3>
+
+        <motion.div
+          variants={underlineVariants}
+          className="h-1 w-24 origin-left rounded-full bg-gradient-to-r from-accent-500 to-accent-400 mb-6"
+          aria-hidden="true"
+        />
+
+        <motion.p
+          variants={fadeUp}
+          className="text-xl md:text-2xl text-primary-300 leading-relaxed max-w-4xl"
+        >
+          {step.description}
+        </motion.p>
+      </motion.div>
+    </div>
+  );
+}
+
 export default function ProcessTimelineSection({ scrollPanelRef }: ProcessTimelineSectionProps) {
   const sectionRef = useRef<HTMLDivElement>(null);
   const [activeStep, setActiveStep] = useState(0);
   const [isDesktop, setIsDesktop] = useState(false);
+  const reduceMotion = !!useReducedMotion();
 
   useEffect(() => {
     const section = sectionRef.current;
@@ -184,37 +281,16 @@ export default function ProcessTimelineSection({ scrollPanelRef }: ProcessTimeli
 
           {/* ───────── Right detail blocks (scroll driver) ───────── */}
           <div className="pb-24 md:pb-0">
-            {steps.map((step, i) => {
-              const active = i === activeStep;
-              return (
-                <div
-                  key={step.title}
-                  data-step-index={i}
-                  className="step-trigger flex items-center border-t border-neutral-800/60 first:border-t-0 py-12 md:min-h-[70vh] md:border-t-0 md:py-0"
-                  style={{
-                    opacity: isDesktop && !active ? 0.35 : 1,
-                    transition: 'opacity 0.4s ease'
-                  }}
-                >
-                  <motion.div
-                    initial={{ opacity: 0, y: 24 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true, amount: 0.4 }}
-                    transition={{ duration: 0.6, ease: 'easeOut' }}
-                  >
-                    <span className="block text-7xl md:text-8xl lg:text-9xl font-black leading-none text-accent-500/20 mb-6">
-                      {String(i + 1).padStart(2, '0')}
-                    </span>
-                    <h3 className="text-4xl md:text-5xl lg:text-6xl font-bold text-primary-50 mb-6 text-balance">
-                      {step.title}
-                    </h3>
-                    <p className="text-xl md:text-2xl text-primary-300 leading-relaxed max-w-4xl">
-                      {step.description}
-                    </p>
-                  </motion.div>
-                </div>
-              );
-            })}
+            {steps.map((step, i) => (
+              <StepPanel
+                key={step.title}
+                step={step}
+                index={i}
+                active={i === activeStep}
+                isDesktop={isDesktop}
+                reduceMotion={reduceMotion}
+              />
+            ))}
           </div>
         </div>
       </div>

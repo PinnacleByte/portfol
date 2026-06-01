@@ -124,7 +124,8 @@ Rebuilt June 2026 — the GSAP alternating timeline was replaced with a two-colu
 - **Mobile**: the rail collapses to just the heading (nav + progress hidden); the 7 panels stack as naturally-flowing cards with `border-t` dividers. An `isDesktop` state (default `false`) gates the dim so mobile shows all panels at full opacity and there is no hydration mismatch.
 - `scrollPanelRef` is still wired (assigned alongside `sectionRef` in the ref callback) so `useSnapScroll`'s edge-detection treats the section as the desktop scroll target.
 - Sticky dot grid unchanged: `sticky top-0 h-[100dvh]` + `marginBottom: -100dvh`.
-- Entrance animations: Framer Motion `whileInView` (`once: true, amount: 0.4`) per panel.
+- **Reveal animation** (extracted into a `StepPanel` sub-component): title animates **word-by-word** (blur-up + 80ms stagger), an accent underline **draws in** (`scaleX 0→1`), and the number + description fade up — choreographed via Framer Motion `variants`. Trigger: **re-fires on each `activeStep`** on desktop (replays as you scroll a step to center), `whileInView once` on mobile (it's a list there), and skipped entirely under `prefers-reduced-motion` (`useReducedMotion`). Driving the reveal off `active` on desktop replaces the old "dim to 0.35" — inactive panels now hide and re-reveal.
+- **Number glow**: the big ghost number carries a static blue glow via **`text-shadow`** (`[text-shadow:0_0_30px_rgba(59,130,246,0.55),...]`) — deliberately *not* `drop-shadow`, which uses the `filter` property and would be clobbered by the blur `filter` animation.
 
 ### SnapScrollContainer.tsx ⭐⭐
 - `INTERNAL_SCROLL_INDICES = [3, 4]` — panels at these indices get `overflow: auto`; all others `overflow: hidden`
