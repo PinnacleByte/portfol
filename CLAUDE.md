@@ -11,13 +11,16 @@
 ✅ **Services Section** — Tech icon grid (real brand icons w/ tile background), dot grid background  
 ✅ **Process (Scrollytelling)** — Sticky split layout: left rail w/ live step highlight + progress, scrolling IntersectionObserver-driven detail panels (no GSAP), internally scrollable on desktop / stacked cards on mobile, sticky dot grid  
 ✅ **Portfolio Section** — 3-column card grid w/ hover lift + glow + image zoom and a rounded "Visit this site" button, internally scrollable on desktop / natural flow on mobile  
+✅ **Pricing Section** — 3 tier cards (Growth highlighted "Most Popular") + full-width dashed Care Plan add-on, aurora blobs, fits one viewport (no internal scroll), "Get Started" CTA → contact via `goTo`  
 ✅ **Team Section** — Aurora blobs, data from Sanity (`portfolioTeam`)  
-✅ **Testimonials Section** — Marquee with responsive card widths, aurora blobs, data from Sanity (`portfolioTestimonial`)  
+✅ **Trust Section** — "Fresh studio. Proven craft." — 3 trust cards (Hammer / MessagesSquare / ShieldCheck) + "Start a conversation" CTA → contact via `goTo`, aurora blobs. **Replaced the fabricated Testimonials marquee** (fake names/companies erode trust with clients who do due diligence)  
 ✅ **Final CTA Section** — Full-bleed, 60-particle NetworkCanvas, embedded footer  
 ✅ **Full-Page Snap Scroll** — Desktop-only (`min-width: 768px`), 700ms transition, internal scroll for sections 3 & 4  
 ✅ **Mobile Responsive Layout** — All sections use `min-h-[100dvh] md:h-full`; sections 3 & 4 drop internal-scroll on mobile and flow naturally  
 ✅ **Sanity CMS** — All content in Sanity Cloud (project `b3q3iq0h`, dataset `production`); Studio embedded at `/studio`  
 ✅ **Data Layer** — `lib/sanityFetch.ts` GROQ helpers; `app/page.tsx` async server component; sections receive data as props  
+✅ **Contact Page** (`/contact`) — Premium dark rebuild: `AuroraBackground`, animated form (name / email / company / project-type / message), `mailto:` submission + inline confirmation, info sidebar, shared `PageHeader`  
+✅ **Work Pages** (`/work`, `/work/[slug]`) — Dark-theme rebuild wired to Sanity: gallery renders real cover images + a category filter; case study renders the real `description` / `tech` / `image` / `liveUrl` with dynamic SEO `generateMetadata`  
 
 ## Sanity CMS Architecture
 
@@ -32,13 +35,12 @@ Sanity Cloud (project b3q3iq0h, dataset production)
   ↓  GROQ queries — lib/sanityFetch.ts
 app/page.tsx  [async Server Component]
   ├─ fetchProjects()      → projects: Project[]
-  ├─ fetchTestimonials()  → testimonials: Testimonial[]
   └─ fetchTeam()          → team: TeamMember[]
   ↓  props
 components/HomePageClient.tsx  ['use client' — hooks, snap scroll]
   ├─ PortfolioSection    (projects prop)
   ├─ TeamSection         (team prop)
-  └─ TestimonialsSection (testimonials prop)
+  └─ TrustSection        (static content — no Sanity data)
 ```
 
 `/work/[slug]` — `fetchProjectBySlug(slug)` directly in the server component; `generateStaticParams` calls `fetchAllSlugs()` for static pre-rendering.
@@ -52,7 +54,7 @@ createClient({ projectId: 'b3q3iq0h', dataset: 'production', apiVersion: '2024-0
 ### lib/sanityFetch.ts
 Typed async GROQ helpers — replace all former `readX()` calls:
 - `fetchProjects()` — all projects ordered by `order` asc, image URL resolved inline
-- `fetchTestimonials()` — all testimonials, `_id` mapped to `id`
+- `fetchTestimonials()` — all testimonials, `_id` mapped to `id` (⚠️ **no longer consumed** — the Trust section replaced the homepage testimonials marquee; helper kept for reference / possible reuse)
 - `fetchTeam()` — all team members, `_id` mapped to `id`, photo URL resolved inline
 - `fetchProjectBySlug(slug)` — single project by slug
 - `fetchAllSlugs()` — array of slug strings for `generateStaticParams`
@@ -67,7 +69,7 @@ GROQ queries flatten Sanity types to match existing TypeScript interfaces (no tr
 ### sanity.config.ts
 `basePath: '/studio'` is required — without it Sanity's internal router misreads the URL and shows "Tool not found: studio". Defines three document types for the embedded Studio:
 - `portfolioProject` — title, slug, category, summary, description, tech[], featured, image, liveUrl, order
-- `portfolioTestimonial` — quote, author
+- `portfolioTestimonial` — quote, author (⚠️ schema retained but **no longer rendered** anywhere on the site after the Trust-section swap; existing fabricated docs can be deleted in Studio)
 - `portfolioTeam` — name, role, description, photo
 
 ### Embedded Studio — `app/studio/[[...tool]]/page.tsx`
@@ -115,6 +117,16 @@ GROQ queries flatten Sanity types to match existing TypeScript interfaces (no tr
 - Animations: `whileInView once:true`, stagger `(index % 3) * 0.12`
 - Data: receives `projects: Project[]` prop from `HomePageClient` (fetched from Sanity in `app/page.tsx`)
 
+### PricingSection.tsx ⭐ (section 5)
+- `<section id="pricing" className="relative flex flex-col justify-center bg-bg-dark min-h-[100dvh] md:h-full overflow-hidden ...">` with an `AuroraBackground` (matches the neighboring Team/Testimonials aesthetic)
+- **Not** an internal scroller — sized to fit one `100dvh` snap panel so all tiers are comparable at a glance. Stays out of `internalScrollSections` / `INTERNAL_SCROLL_INDICES`. Compact spacing (`py-10 md:py-6`, `text-sm` feature lists, `text-3xl` prices, featured lift `md:-translate-y-2`) keeps content to ~742px — verified to fit a 1366×768 laptop with no clipping (was 868px / clipped before tightening); mobile flows naturally
+- Uses a **compact inline heading** (eyebrow "Pricing" + `h2 text-3xl sm:text-4xl` "Our Packages" + muted subtitle) rather than the shared `SectionHeading` — the centered `SectionHeading` title (`lg:text-6xl`) was too tall to keep the whole section in one viewport
+- Data is local & typed: `interface PricingTier` + `const tiers: PricingTier[]` + a `carePlan` object at module scope (no inline JSX content)
+- **3 tier cards** (`md:grid-cols-3`): Starter $599, Growth $1,299 (`featured`), Premium $2,499. The featured card gets `border-accent-500` + `shadow-teal-glow-lg` + `md:-translate-y-3` + a "Most Popular" pill badge
+- **Care Plan add-on** ($199/mo): full-width **dashed** card (`border-dashed border-accent-500/40`) below the grid, laid out as a slim horizontal banner (price/tagline left, features grid right, CTA right)
+- **CTA `goTo` pattern**: receives `goTo?` — desktop renders a `<button onClick={() => goTo(8)}>` (the contact panel); mobile (`goTo` undefined) falls back to `<a href="#contact">`. `HomePageClient` passes `goTo={isDesktop ? goTo : undefined}`. CTA classes mirror `Button.tsx` primary/ghost variants. `CONTACT_INDEX = 8` const must track the section order
+- Animations: `whileInView once:true`, `initial={{opacity:0,y:24}}`, stagger `index * 0.1` — matches TeamSection/PortfolioSection
+
 ### ProcessTimelineSection.tsx ⭐⭐ (section 3 — sticky split scrollytelling)
 Rebuilt June 2026 — the GSAP alternating timeline was replaced with a two-column scrollytelling layout, and **GSAP was removed from the project entirely** (file name kept for stability).
 - **Desktop**: a sticky left rail (`md:sticky md:top-0 md:h-[100dvh]`) lists all 7 steps with the active one highlighted (accent number + growing accent line) plus a progress bar and `0X / 07` counter. The right column is a stack of full-viewport detail panels (`md:h-[100dvh]`) — gradient-filled number, big title, description; on desktop only the active step's content is shown (non-active panels reset to hidden and re-reveal on activation).
@@ -149,10 +161,10 @@ interface UseSnapScrollProps {
 ### app/page.tsx ⭐⭐ (async Server Component)
 ```typescript
 export default async function HomePage() {
-  const [projects, testimonials, team] = await Promise.all([
-    fetchProjects(), fetchTestimonials(), fetchTeam(),
+  const [projects, team] = await Promise.all([
+    fetchProjects(), fetchTeam(),
   ]);
-  return <HomePageClient projects={projects} testimonials={testimonials} team={team} />;
+  return <HomePageClient projects={projects} team={team} />;
 }
 ```
 Fetches all Sanity data in parallel, passes to `HomePageClient`.
@@ -167,7 +179,7 @@ const sections = [/* single array used for both mobile and desktop */];
 ```
 - Mobile: `<Navbar />` + `<div h-[57px]>` spacer + `{sections}` + `<Footer />`
 - Desktop: `<Navbar goTo={goTo} visible={currentIndex > 0} />` + `<SnapScrollContainer>`
-- Receives `projects`, `testimonials`, `team` props and passes them down to sections
+- Receives `projects`, `team` props and passes them down to sections (testimonials removed with the Trust-section swap; `TrustSection` takes `goTo={isDesktop ? goTo : undefined}` for its CTA)
 
 ### ServicesSection.tsx
 - Tech items defined in `groups` array inside the file (not from `data/db`)
@@ -177,11 +189,13 @@ const sections = [/* single array used for both mobile and desktop */];
 - Section uses `scroll-mt-16 py-20 md:py-0` so anchor scrolls clear the fixed navbar and content has breathing room on mobile
 - H2: `text-4xl sm:text-5xl md:text-6xl` — smaller on narrow screens so "Technologies & Tools." fits without ugly wrap
 
-### TestimonialsSection.tsx
-- Card width is **responsive** via `useEffect` + resize listener: 280px (<640), 320px (640–767), 384px (≥768)
-- `scrollDistance` recomputed from current `cardWidth` so the infinite-loop seam stays clean across breakpoints: `-(testimonials.length * (cardWidth + 24))`
-- Card padding: `p-6 md:p-8` (narrower on mobile to give the smaller cards proportional spacing)
-- Marquee wrapper has `overflow-hidden`; aurora blob background
+### TrustSection.tsx ⭐ (section 7 — replaced Testimonials)
+The fabricated testimonials (fake names/companies like "Alex Chen, CTO at Innovate Digital") were **removed** — they'd erode trust with professional clients who do due diligence. This honest trust-builder replaces them, turning "no testimonials yet" into a transparency strength.
+- `<section className="relative flex flex-col justify-center bg-bg-dark min-h-[100dvh] md:h-full overflow-hidden ...">` with `AuroraBackground` (matches the neighboring Team/Pricing aesthetic)
+- **Static, local content — no Sanity data.** Compact centered heading: eyebrow "New Studio, Honest Foundations", `h2` "Fresh studio. Proven craft.", muted subheading
+- **3 trust cards** (`md:grid-cols-3`) defined in a local `cards` array, each `{ icon, title, description }` with a lucide icon in an `bg-accent-500/10` tile: `Hammer` → "Craft over credentials", `MessagesSquare` → "Direct access, always", `ShieldCheck` → "Built to earn your trust"
+- **CTA below the cards**: tagline + a "Start a conversation" button using the same `goTo` pattern as PricingSection — desktop renders `<button onClick={() => goTo(8)}>` (the contact panel), mobile (`goTo` undefined) falls back to `<a href="#contact">`. `HomePageClient` passes `goTo={isDesktop ? goTo : undefined}`. `CONTACT_INDEX = 8` const must track the section order
+- Animations: heading + cards `whileInView once`, stagger `index * 0.1` — mirrors TeamSection/PricingSection
 
 ### NetworkCanvas.tsx ⭐ (reusable)
 Configurable props: `particleCount` (60), `connectionRadius` (155), `particleSize` (1.5), `particleAlpha` (0.3), `lineAlpha` (0.18), `speed` (0.45)
@@ -195,9 +209,27 @@ Configurable props: `particleCount` (60), `connectionRadius` (155), `particleSiz
 ### Navbar.tsx
 - `fixed top-0 left-0 right-0 z-50`
 - `visible` prop (default `true`): `animate={{ opacity, y }}` + `style={{ pointerEvents }}`
-- Nav indices: Logo→1, About→2, Process→3, Work→4, Team→5, Contact→7
-- "Start a Project" → `goTo(7)`
+- Nav indices: Logo→1, About→2, Process→3, Work→4, Pricing→5, Team→6, Contact→8
+- "Start a Project" → `goTo(8)`
 - Mobile: `<a href="#id">` anchors. Desktop: `<button>` calling `goTo(index)`
+
+## Standalone Routes (`/contact`, `/work`) ⭐
+
+These live **outside** the snap-scroll shell, so they don't use the homepage `Navbar` (its links are `#anchors` that only resolve on the homepage). Two shared patterns:
+
+1. **`components/ui/PageHeader.tsx`** — lightweight sticky header (logo → `/` + a configurable "Back" link). `sticky top-0 z-20 bg-bg-dark/80 backdrop-blur-md`. Used by `/contact`, `/work`, and `/work/[slug]`.
+2. **`<main>` is its own desktop scroll container** — `min-h-[100dvh] overflow-x-hidden bg-bg-dark md:h-[100dvh] md:overflow-y-auto`. Required because `globals.css` sets `html, body { overflow: hidden }` ≥768px for the homepage snap-scroll; a standalone route has no snap container, so without this the page can't scroll on desktop (content past one viewport is clipped). `h-[100dvh]` is viewport-relative so it doesn't depend on `body` height; `LenisProvider` is a no-op fragment on desktop.
+
+### ContactClient.tsx (`/contact`)
+- `app/contact/page.tsx` is a **server component** exporting `metadata`, rendering `<ContactClient />` (mirrors the `app/page.tsx` → `HomePageClient` split so the route keeps SEO metadata while the form uses hooks).
+- Dark theme + `AuroraBackground`. Controlled form: name, email, company (optional), project-type `select`, message — with labels, `required`, email validation.
+- **No backend yet** — `handleSubmit` composes a prefilled `mailto:hello@pinnaclebyte.dev` and swaps in an inline confirmation panel (with a direct-email fallback + "Send another"). The handler is the single spot to swap for a server action later.
+- Sidebar: Email / Response-time / Studio info cards + a "What happens next" checklist.
+
+### WorkGallery.tsx + case study (`/work`, `/work/[slug]`)
+- `app/work/page.tsx` (server) fetches `fetchProjects()` → `WorkGallery` (`'use client'`, category filter state). Cards now **render the real Sanity `project.image`** via `next/image` (cover, hover-zoom) with a numbered-placeholder fallback — previously the card image was a blank gray box. Whole card links to `/work/[slug]`.
+- `app/work/[slug]/page.tsx` (server) now renders the **real Sanity fields** (`title`, `category`, `featured`, `summary`, `description` split into paragraphs, `tech` pills, cover `image`, `liveUrl`) — previously it fetched the project then showed hardcoded placeholder copy. Adds `generateMetadata` for per-project SEO and keeps `generateStaticParams` + ISR.
+- Image `src` is guarded (`startsWith('/') || startsWith('http')`) before `<Image>`, same as PortfolioSection.
 
 ## Data Types (`types/index.ts`)
 
@@ -238,7 +270,13 @@ lib/sanity.ts                                        # Sanity client config (use
 lib/sanityFetch.ts                                   # Typed GROQ helpers: fetchProjects, fetchTestimonials, fetchTeam, fetchProjectBySlug, fetchAllSlugs
 app/page.tsx                                         # Async Server Component — fetches Sanity data, renders HomePageClient
 app/studio/[[...tool]]/page.tsx                      # Embedded Sanity Studio route
+app/contact/page.tsx                                 # /contact — server page (exports metadata) → ContactClient
+app/work/page.tsx                                    # /work — server page → WorkGallery (Sanity projects)
+app/work/[slug]/page.tsx                             # /work/[slug] — case study from Sanity (description/tech/image/liveUrl) + generateMetadata
 components/HomePageClient.tsx                        # 'use client' — snap scroll hooks, sections array, passes data props
+components/ContactClient.tsx                         # /contact — 'use client' premium form (mailto + inline confirmation), AuroraBackground
+components/work/WorkGallery.tsx                       # /work — category filter + cards rendering Sanity cover images
+components/ui/PageHeader.tsx                          # Shared sticky header for standalone routes (/contact, /work) — logo + back link
 types/index.ts                                       # Project, Testimonial, TeamMember, Service
 styles/globals.css                                   # Dark root styles, dotPulse + cursorBlink keyframes
 tailwind.config.ts                                   # Color tokens, glow shadows
@@ -257,9 +295,10 @@ components/sections/HeroSection.tsx                  # Section 1 — energetic 1
 components/sections/ServicesSection.tsx              # Section 2 — tech icon grid
 components/sections/ProcessTimelineSection.tsx       # Section 3 — sticky split scrollytelling (IntersectionObserver), internally scrollable
 components/sections/PortfolioSection.tsx             # Section 4 — 3-col card grid, internally scrollable, projects prop
-components/sections/TeamSection.tsx                  # Section 5 — team prop
-components/sections/TestimonialsSection.tsx          # Section 6 — testimonials prop
-components/sections/FinalCtaSection.tsx              # Section 7 — CTA + embedded footer
+components/sections/PricingSection.tsx               # Section 5 — tier cards + Care Plan add-on, goTo CTA, fits one viewport
+components/sections/TeamSection.tsx                  # Section 6 — team prop
+components/sections/TrustSection.tsx                 # Section 7 — static trust cards + goTo CTA (replaced Testimonials)
+components/sections/FinalCtaSection.tsx              # Section 8 — CTA + embedded footer
 public/icons/shopify.svg                             # Custom Shopify icon
 ```
 
@@ -274,9 +313,10 @@ public/icons/shopify.svg                             # Custom Shopify icon
 | 2 | ServicesSection | hidden | |
 | 3 | ProcessTimelineSection | **auto** | IntersectionObserver root = section element; sticky split scrollytelling; **nested snap-scroll** (`snap-y mandatory`, full-viewport `snap-start` steps) |
 | 4 | PortfolioSection | **auto** | scrollPanelRef, same escape pattern |
-| 5 | TeamSection | hidden | |
-| 6 | TestimonialsSection | hidden | |
-| 7 | FinalCtaSection | hidden | Embedded footer bar |
+| 5 | PricingSection | hidden | Tier cards + Care Plan add-on, fits one viewport (not an internal scroller); `goTo` CTA → contact (8) |
+| 6 | TeamSection | hidden | |
+| 7 | TrustSection | hidden | Static trust cards + "Start a conversation" CTA → contact (8); replaced the fabricated Testimonials marquee |
+| 8 | FinalCtaSection | hidden | Embedded footer bar |
 
 **Mobile Fallback** (`< 768px`): Normal vertical scroll, Lenis smooth scrolling, `Footer.tsx` visible, all snap hooks disabled. Section sizing & internal-scroll quirks:
 
@@ -304,7 +344,8 @@ public/icons/shopify.svg                             # Custom Shopify icon
 | Process panels: reveal wrong / cards hidden on mobile | `isDesktop` state (default `false`) selects the trigger — desktop replays the reveal off `active`, mobile uses `whileInView once` so stacked cards reveal and stay (avoids hiding non-active cards + SSR hydration mismatch) |
 | Big number/text blurs mid-animation | Animating `scale` on large text rasterizes the glyph and stretches the bitmap → blur during the transform. Animate `translateY`/opacity instead; keep `scale` off huge text |
 | Nested snap traps Process (can't escape to next section) | Make steps full-viewport `snap-start` so `scrollTop: 0` = first step and the last step's snap = max scroll → `useSnapScroll` still detects atTop/atBottom. If `snap-mandatory` feels too sticky, use `snap-proximity` |
-| Testimonial cards wider than viewport on mobile (cut off) | Fix: responsive card width via state, `scrollDistance` recomputed from current width |
+| Standalone route (`/contact`, `/work`) won't scroll on desktop | `globals.css` sets `html, body { overflow: hidden }` ≥768px for the homepage snap-scroll. Standalone routes have no snap container, so make `<main>` its own scroll area: `md:h-[100dvh] md:overflow-y-auto` (+ `overflow-x-hidden` to clip the aurora). `h-[100dvh]` is viewport-relative so it ignores `body` height |
+| Standalone route header scrolls away | `PageHeader` is `sticky top-0 z-20 bg-bg-dark/80 backdrop-blur-md` so the logo + back link stay pinned inside the scroll container |
 | Sticky section headers covered by fixed navbar on mobile | Fix: `sticky top-[57px] md:top-0` |
 | Tech icon brand colors blend into dark bg | Fix: wrap each icon in `bg-neutral-900/50 border` tile |
 | Services H2 overflows narrow viewports | Fix: `text-4xl sm:text-5xl md:text-6xl` |
@@ -348,14 +389,16 @@ No `.env.local` required for public reads — Sanity dataset is public.
 
 ## Future Enhancements
 
-- Flesh out `/app/work/[slug]/` with project-specific content (use Sanity `description` and additional fields)
-- Contact form with server action + email (Resend / Nodemailer)
+- Contact form: swap the `mailto:` submission in `ContactClient.tsx` for a server action + email (Resend / Nodemailer) — the handler is isolated for exactly this
+- `/work/[slug]` case studies could grow richer Sanity fields (gallery images, results/metrics, body blocks) beyond the current `description` / `tech` / `image` / `liveUrl`
+- Delete the orphaned `portfolioTestimonial` docs in Studio and (optionally) remove the now-unused `fetchTestimonials` helper + `Testimonial` type + schema
 - ProcessTimeline: optional auto-advance / "play" mode, or per-step icons/illustrations in the detail panels
 - Sanity webhook → Vercel Deploy Hook for automatic redeploys on content publish (ISR already handles ~60s updates; webhook would make it instant)
 
 ---
 
-**Last Updated**: June 2026 (Process: sticky split scrollytelling + GSAP removed, word-by-word reveal, gradient/spring step numbers, nested CSS snap-scroll; Portfolio: hover lift/glow/zoom + "Visit this site" button)  
+**Last Updated**: June 2026 — **Testimonials → Trust swap + standalone-route dark rebuild.** Removed the fabricated Testimonials marquee (fake names/companies) and replaced it at index 7 with `TrustSection` ("Fresh studio. Proven craft." — 3 trust cards + "Start a conversation" `goTo` CTA, no Sanity data); dropped the `testimonials` fetch/prop from `app/page.tsx` + `HomePageClient` (the `portfolioTestimonial` schema + `fetchTestimonials` helper are retained but unused). Rebuilt `/contact` (premium dark form, `mailto` + confirmation, server-page/client split) and `/work` + `/work/[slug]` (dark theme, gallery now renders real Sanity cover images, case study now renders real `description`/`tech`/`image`/`liveUrl` + `generateMetadata`). Added shared `PageHeader`; standalone routes scroll via `<main md:h-[100dvh] md:overflow-y-auto>` (the global `body { overflow:hidden }` only suits the snap-scroll homepage).  
+**Previously**: Pricing section added at index 5 (3 tier cards + Care Plan add-on, `goTo` CTA → contact; indices after Portfolio shifted +1). Process: sticky split scrollytelling + GSAP removed, word-by-word reveal, gradient/spring step numbers, nested CSS snap-scroll; Portfolio: hover lift/glow/zoom + "Visit this site" button.  
 **Dark Theme (Navy + Electric Blue)**: ✅  
 **Animated Backgrounds**: ✅ (dot grid, aurora blobs, network canvas)  
 **Full-Page Snap Scroll**: ✅ (sections 3 & 4 internally scrollable via `internalScrollSections[]`)  
@@ -363,4 +406,6 @@ No `.env.local` required for public reads — Sanity dataset is public.
 **Content Management**: ✅ (Sanity Studio at `/studio`, changes live within ~60s of publishing)  
 **ISR**: ✅ (`useCdn: false` + `next: { revalidate: 60 }` on all fetch calls)  
 **Security Headers**: ✅ (X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy — grade A on securityheaders.com)  
-**Next Task**: Flesh out case study pages with full Sanity content
+**Honest Trust Section**: ✅ (fabricated testimonials removed; transparent "Fresh studio. Proven craft." trust-builder in their place)  
+**Standalone Routes**: ✅ (`/contact`, `/work`, `/work/[slug]` on the dark theme + wired to Sanity)  
+**Next Task**: Swap the contact form `mailto:` for a server action + email (Resend / Nodemailer)

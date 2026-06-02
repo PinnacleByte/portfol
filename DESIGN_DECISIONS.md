@@ -48,11 +48,21 @@ Desktop-only. All sections live in the DOM simultaneously (no mount/unmount). Fr
 - Carousel state is preserved when navigating away and back
 - Section animations using `whileInView` fire naturally when the panel translates into the viewport
 
-The trade-off: all section JS runs immediately. This is acceptable for a portfolio with 7 sections.
+The trade-off: all section JS runs immediately. This is acceptable for a portfolio with 8 content sections.
 
 ## Nested Snap Inside Process
 
 The Process section (an internal scroller) additionally uses **native CSS scroll-snap** (`scroll-snap-type: y mandatory`), with each step a full-viewport `scroll-snap-align: start` block — so scrolling within it snaps step-by-step, a snap-scroll nested inside the outer page snap-scroll. Native CSS was chosen over a second JS wheel handler specifically so it doesn't fight the outer `useSnapScroll` wheel handler. Full-viewport `snap-start` steps also keep the outer edge-escape working (`scrollTop: 0` = first step, the last step's snap = max scroll, so the existing atTop/atBottom detection still fires). The trade-off: CSS scroll-snap has no duration knob, so the snap glide speed is browser-controlled — a tunable/slower snap would require a JS wheel-driven implementation.
+
+## Pricing Section (one-viewport, goTo CTA)
+
+The Pricing section (index 5, between Portfolio and Team) is **not** an internal scroller like Process/Portfolio — a pricing comparison only works if all tiers are visible at once, so it's sized to fit a single `100dvh` snap panel (compact spacing, `text-sm` feature lists, `text-3xl` prices, the Care Plan rendered as a slim full-width dashed banner rather than a fourth tall card). Keeping it out of `internalScrollSections` / `INTERNAL_SCROLL_INDICES` also means no extra panelRef wiring.
+
+Because the panel is `overflow:hidden` (content taller than the viewport clips silently rather than scrolling), the height budget is tight: it uses a **compact inline heading** instead of the shared centered `SectionHeading` (whose `lg:text-6xl` title was too tall). The first pass was 868px and clipped the "Most Popular" badge + Care Plan banner on a 1366×768 laptop; after tightening (smaller heading, `py-10 md:py-6`, `text-3xl` prices, reduced feature gaps, featured lift `md:-translate-y-2`) it measures ~742px — verified via Playwright to fit 1366×768 with ~13px margin top and bottom. **If you add a feature row or a longer tagline, re-check this height** — it clips, it doesn't scroll.
+
+Inserting a section mid-deck shifts every later index, so the change touched three index registrations: `HomePageClient` (`totalSections` 8→9 + the sections array), and `Navbar` (added Pricing→5, Team→6, Contact→8, "Start a Project"→`goTo(8)`). The Growth tier is highlighted as "Most Popular" with an accent border + `shadow-teal-glow-lg` + a small `md:-translate-y-3` lift.
+
+The "Get Started" CTA mirrors the navbar's contact behavior: on desktop the section receives `goTo` and the button calls `goTo(8)` (the contact panel) — a plain `#contact` anchor can't move a transform-translated snap deck. On mobile `goTo` is omitted (`isDesktop ? goTo : undefined`) and the button falls back to a real `<a href="#contact">` anchor, which works because mobile is a normally-scrolling stacked page.
 
 ## Mobile Responsive Strategy
 
@@ -74,9 +84,17 @@ ProcessTimeline and Portfolio are 100dvh internal scrollers on desktop — the s
 
 The navbar is `position: fixed` at 57px tall. A mobile-only `<div h-[57px]>` spacer at the top of `<main>` pushes the first section below the bar. For elements that anchor to viewport top after the first section — anchor-link targets, sticky headers — use `scroll-mt-16` (or `sticky top-[57px] md:top-0`) so they clear the navbar.
 
-**Responsive marquee card width**
+**Honest trust section over fabricated testimonials**
 
-The testimonials marquee uses fixed-pixel card widths because the seamless infinite-loop translation distance is computed from card width + gap. Card width is responsive (`280 / 320 / 384`) and `scrollDistance` is recomputed via state + resize listener, so the loop seam stays clean across breakpoints.
+The original section 7 was a testimonials marquee fed by `portfolioTestimonial` Sanity docs — but the content was fabricated (invented names/companies like "Alex Chen, CTO at Innovate Digital"). For a brand-new studio courting professional international clients who do due diligence, fake reviews are a liability: one reverse-image-search or LinkedIn lookup and trust is gone. The marquee was replaced with `TrustSection` — "Fresh studio. Proven craft." — which reframes the absence of testimonials as transparency: three trust cards (craft over credentials / direct founder access / building reputation one project at a time) plus a "Start a conversation" CTA. It's static, local content (no Sanity data), so there's nothing to fabricate. The `portfolioTestimonial` schema and `fetchTestimonials` helper were left in place (removing the schema would orphan CMS docs) but are no longer wired into the site.
+
+**Standalone routes are their own desktop scroll container**
+
+`globals.css` locks the document on desktop (`html, body { overflow: hidden; height: 100% }` at `≥768px`) so the homepage snap-scroll owns the wheel. Standalone routes (`/contact`, `/work`, `/work/[slug]`) have no snap container, so without intervention their content is clipped at one viewport with no way to scroll. Fix: each route's `<main>` becomes its own scroll area — `md:h-[100dvh] md:overflow-y-auto` (plus `overflow-x-hidden` to clip the aurora). `h-[100dvh]` is viewport-relative, so it doesn't depend on the parent chain's height, and `LenisProvider` is a no-op fragment on desktop. These routes also use a shared sticky `PageHeader` instead of the homepage `Navbar`, whose `#anchor` links only resolve on the homepage.
+
+**Server-page / client-component split for `/contact`**
+
+`app/contact/page.tsx` stays a server component (so it can `export const metadata` for SEO) and renders `ContactClient` (`'use client'`) for the interactive form — the same pattern as `app/page.tsx` → `HomePageClient`. The form has no backend yet, so submission composes a prefilled `mailto:` and shows an inline confirmation; the `handleSubmit` is isolated so it can later be swapped for a server action + email without touching the markup.
 
 **Tech icon tile background**
 
@@ -108,7 +126,7 @@ The original data layer used local JSON files (`data/db/*.json`) managed by a cu
 - `lib/sanity.ts` (client config) and `lib/sanityFetch.ts` (typed GROQ helpers) added.
 - `sanity.config.ts` (schema for 3 document types) added; `app/studio/[[...tool]]/page.tsx` embeds the Studio at `/studio`.
 - `app/page.tsx` converted from `'use client'` to an `async` server component that fetches data in parallel. Its interactive logic (hooks, snap scroll) was extracted to `components/HomePageClient.tsx` (`'use client'`).
-- `PortfolioSection`, `TeamSection`, `TestimonialsSection`, `SelectedWorkSection` were changed from bundle-time JSON imports to accepting data as props passed from `HomePageClient`.
+- `PortfolioSection`, `TeamSection`, `TestimonialsSection`, `SelectedWorkSection` were changed from bundle-time JSON imports to accepting data as props passed from `HomePageClient`. *(`TestimonialsSection` was later removed entirely — see "Honest trust section over fabricated testimonials" above.)*
 
 **Why server component for `app/page.tsx`:**
 Client components cannot be `async`, so data fetching had to be lifted to a server component parent. The server component calls `Promise.all([fetchProjects(), fetchTestimonials(), fetchTeam()])` and passes results as props. This is the standard Next.js App Router pattern for server-fetched + client-interactive pages.

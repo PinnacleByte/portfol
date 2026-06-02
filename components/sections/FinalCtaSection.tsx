@@ -65,10 +65,10 @@ export default function FinalCtaSection() {
         <div className="container flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-primary-400">
           <p>© 2026 PinnacleByte. All rights reserved.</p>
           <a
-            href="mailto:hello@pinnaclebyte.com"
+            href="mailto:hello@pinnaclebyte.dev"
             className="text-accent-400 hover:text-accent-300 transition-colors"
           >
-            hello@pinnaclebyte.com
+            hello@pinnaclebyte.dev
           </a>
           <div className="flex gap-6">
             <a href="/work" className="hover:text-primary-200 transition-colors">Work</a>

@@ -34,10 +34,10 @@ export default function Footer() {
           <div className="rounded-2xl border border-neutral-700 bg-neutral-900/50 p-6">
             <p className="text-sm uppercase tracking-[0.32em] text-accent-400">Email</p>
             <a
-              href="mailto:hello@pinnaclebyte.com"
+              href="mailto:hello@pinnaclebyte.dev"
               className="mt-3 block text-base font-semibold text-primary-50 hover:text-accent-400 transition-colors"
             >
-              hello@pinnaclebyte.com
+              hello@pinnaclebyte.dev
             </a>
           </div>
 

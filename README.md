@@ -23,7 +23,7 @@ npm run start
 
 ## Content Management (Sanity Studio)
 
-All content (projects, testimonials, team members) is managed through Sanity Studio, embedded at `/studio`.
+Project and team content is managed through Sanity Studio, embedded at `/studio`. (The homepage no longer shows testimonials — the fabricated marquee was replaced by a static "Fresh studio. Proven craft." Trust section — so the `portfolioTestimonial` type is retained but unused.)
 
 - Visit `http://localhost:3000/studio` in dev, or `https://yoursite.com/studio` after deploying to Vercel.
 - Sign in with your Sanity account (the one that owns project `b3q3iq0h`).
@@ -40,7 +40,7 @@ All content (projects, testimonials, team members) is managed through Sanity Stu
 
 **Document types managed in Studio:**
 - `portfolioProject` — title, slug, category, summary, description, tech stack, featured flag, image, live URL, order
-- `portfolioTestimonial` — quote, author
+- `portfolioTestimonial` — quote, author *(retained but no longer rendered on the site)*
 - `portfolioTeam` — name, role, description, photo
 
 **Adding project images:**
@@ -56,7 +56,7 @@ app/page.tsx (Server Component)
   ↓ props
 components/HomePageClient.tsx (Client Component — snap scroll, hooks)
   ↓ props
-PortfolioSection / TeamSection / TestimonialsSection
+PortfolioSection / TeamSection   (TrustSection is static — no Sanity data)
 ```
 
 Public reads bypass the Sanity CDN (`useCdn: false`) and revalidate every 60 seconds (`next: { revalidate: 60 }`) so Studio changes appear on the live site within ~60 seconds of publishing. `/work/[slug]` routes are pre-rendered at build time via `generateStaticParams` from Sanity slugs.
@@ -68,22 +68,27 @@ app/
   page.tsx                          # Server Component — fetches Sanity data, renders HomePageClient
   studio/[[...tool]]/page.tsx       # Embedded Sanity Studio (dynamic, auth via Sanity account)
   work/
-    page.tsx                        # All projects gallery — fetches from Sanity
-    [slug]/page.tsx                 # Case study detail — static params from Sanity slugs
-  contact/page.tsx                  # Contact page
+    page.tsx                        # All projects gallery — renders Sanity cover images + category filter
+    [slug]/page.tsx                 # Case study — real Sanity description/tech/image/liveUrl + generateMetadata
+  contact/page.tsx                  # /contact — server page (metadata) → ContactClient
 components/
   HomePageClient.tsx                # 'use client' — snap scroll hooks, passes data to sections
+  ContactClient.tsx                 # /contact — 'use client' premium form (mailto + confirmation), aurora background
+  work/
+    WorkGallery.tsx                 # /work — 'use client' category filter, cards render Sanity images
   sections/
     IntroSplashSection.tsx          # Section 0 — NetworkCanvas + one-shot typewriter
     HeroSection.tsx                 # Section 1 — 120-particle canvas, blur-reveal headline
     ServicesSection.tsx             # Section 2 — Tech icon grid, dot grid background
     ProcessTimelineSection.tsx      # Section 3 — sticky split scrollytelling (IntersectionObserver), internally scrollable
     PortfolioSection.tsx            # Section 4 — 3-col card grid, internally scrollable, projects prop
-    TeamSection.tsx                 # Section 5 — Aurora background, team prop
-    TestimonialsSection.tsx         # Section 6 — Marquee, aurora background, testimonials prop
-    FinalCtaSection.tsx             # Section 7 — CTA + embedded footer
+    PricingSection.tsx              # Section 5 — tier cards + Care Plan add-on, aurora background, goTo CTA
+    TeamSection.tsx                 # Section 6 — Aurora background, team prop
+    TrustSection.tsx                # Section 7 — static trust cards + goTo CTA (replaced Testimonials)
+    FinalCtaSection.tsx             # Section 8 — CTA + embedded footer
   ui/
     Navbar.tsx                      # Fixed navbar, hidden on intro, snap-nav on desktop
+    PageHeader.tsx                  # Sticky header for standalone routes (/contact, /work) — logo + back link
     Footer.tsx                      # Mobile only
     NetworkCanvas.tsx               # Particle system (configurable)
     DotGridBackground.tsx           # 18×11 pulsing dot grid
@@ -114,9 +119,10 @@ types/
 | 2 | ServicesSection | Dot Grid Pulse | Tech icon grid |
 | 3 | ProcessTimelineSection | Dot Grid Pulse (sticky) | Sticky split scrollytelling, internally scrollable w/ nested snap |
 | 4 | PortfolioSection | — | 3-col card grid (hover lift/glow + "Visit this site" button), internally scrollable, Sanity data |
-| 5 | TeamSection | Aurora Blobs | Sanity data |
-| 6 | TestimonialsSection | Aurora Blobs | Marquee, Sanity data |
-| 7 | FinalCtaSection | Network Graph | CTA + embedded footer |
+| 5 | PricingSection | Aurora Blobs | 3 tier cards (Growth = "Most Popular") + dashed Care Plan add-on, fits one viewport, "Get Started" CTA → contact |
+| 6 | TeamSection | Aurora Blobs | Sanity data |
+| 7 | TrustSection | Aurora Blobs | Static trust cards + "Start a conversation" CTA → contact (replaced Testimonials) |
+| 8 | FinalCtaSection | Network Graph | CTA + embedded footer |
 
 ## Snap Scroll Architecture
 
@@ -124,7 +130,7 @@ Sections 3 and 4 scroll internally before the snap advances. `useSnapScroll` han
 
 ```typescript
 useSnapScroll({
-  totalSections: 8,
+  totalSections: 9,
   internalScrollSections: [
     { index: 3, panelRef: processTimelinePanelRef },
     { index: 4, panelRef: workPanelRef },

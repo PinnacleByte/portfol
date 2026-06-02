@@ -8,8 +8,9 @@ const links = [
   { label: 'About', href: '#about', index: 2 },
   { label: 'Process', href: '#process', index: 3 },
   { label: 'Work', href: '#work', index: 4 },
-  { label: 'Team', href: '#team', index: 5 },
-  { label: 'Contact', href: '#contact', index: 7 },
+  { label: 'Pricing', href: '#pricing', index: 5 },
+  { label: 'Team', href: '#team', index: 6 },
+  { label: 'Contact', href: '#contact', index: 8 },
 ];
 
 interface NavbarProps {
@@ -63,7 +64,7 @@ export default function Navbar({ goTo, visible = true }: NavbarProps) {
         <Button
           variant="primary"
           className="hidden md:inline-flex"
-          onClick={() => goTo ? goTo(7) : undefined}
+          onClick={() => goTo ? goTo(8) : undefined}
         >
           Start a Project
         </Button>
