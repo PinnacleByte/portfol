@@ -6,3 +6,11 @@ out/
 
 # Local mobile-audit harness — Playwright scripts + ~22MB of screenshots, not for the repo
 audit-screenshots/
+
+# Claude Code local settings — machine-specific absolute paths + permission rules
+.claude/settings.local.json
+
+# Internal / working docs — not for the public repo
+SECURITY_AUDIT.md
+blueprint/
+pinnaclebyte-pricing-prompt.md

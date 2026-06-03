@@ -6,6 +6,7 @@ import { ArrowUpRight } from 'lucide-react';
 import AuroraBackground from '@/components/ui/AuroraBackground';
 import PageHeader from '@/components/ui/PageHeader';
 import { fetchProjectBySlug, fetchAllSlugs } from '@/lib/sanityFetch';
+import { isHttpUrl } from '@/lib/url';
 
 interface WorkCaseStudyProps {
   params: Promise<{
@@ -50,6 +51,9 @@ export default async function WorkCaseStudyPage({ params }: WorkCaseStudyProps) 
     ? project.description.split('\n').map((p) => p.trim()).filter(Boolean)
     : [];
 
+  // Only treat the CMS-supplied live URL as a link target if it's http(s).
+  const liveUrl = isHttpUrl(project.liveUrl) ? project.liveUrl : undefined;
+
   return (
     <main className="relative min-h-[100dvh] overflow-x-hidden bg-bg-dark md:h-[100dvh] md:overflow-y-auto">
       <PageHeader backHref="/work" backLabel="Back to work" />
@@ -73,9 +77,9 @@ export default async function WorkCaseStudyPage({ params }: WorkCaseStudyProps) 
               {project.title}
             </h1>
             <p className="text-lg leading-8 text-primary-300">{project.summary}</p>
-            {project.liveUrl && (
+            {liveUrl && (
               <a
-                href={project.liveUrl}
+                href={liveUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 rounded-full bg-accent-500 px-6 py-3 text-sm font-semibold text-bg-dark shadow-teal-glow transition hover:bg-accent-600 hover:shadow-teal-glow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500 focus-visible:ring-offset-2 focus-visible:ring-offset-bg-dark"
@@ -141,16 +145,16 @@ export default async function WorkCaseStudyPage({ params }: WorkCaseStudyProps) 
             </div>
           )}
 
-          {project.liveUrl && (
+          {liveUrl && (
             <div className="rounded-2xl border border-neutral-700 bg-neutral-900/50 p-6">
               <p className="text-sm uppercase tracking-[0.32em] text-accent-400">Live site</p>
               <a
-                href={project.liveUrl}
+                href={liveUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="mt-2 inline-flex items-center gap-1.5 break-all text-base font-semibold text-primary-50 transition hover:text-accent-400"
               >
-                {project.liveUrl.replace(/^https?:\/\//, '')}
+                {liveUrl.replace(/^https?:\/\//, '')}
                 <ArrowUpRight className="h-4 w-4 shrink-0" />
               </a>
             </div>

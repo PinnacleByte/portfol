@@ -105,7 +105,7 @@ sanity.config.ts                    # Sanity Studio schema (3 document types)
 styles/
   globals.css                       # Dark root styles, keyframes
 tailwind.config.ts                  # Color tokens, glow shadows
-next.config.mjs                     # cdn.sanity.io remotePattern, reactStrictMode, security headers
+next.config.mjs                     # cdn.sanity.io remotePattern, reactStrictMode, security headers (HSTS + CSP-Report-Only + base 5; /studio noindex)
 types/
   index.ts                          # Project, Testimonial, TeamMember, Service interfaces
 ```
@@ -158,6 +158,15 @@ Deploy the repo to Vercel with no extra environment variables — public Sanity 
 - `/studio` gives you a live content editing UI (log in with your Sanity account)
 - Content changes in Sanity Studio appear on the live site within ~60 seconds (ISR, no redeploy needed)
 - `/work/[slug]` pages are statically generated at build time from Sanity data — new projects also revalidate every 60 seconds via ISR
+
+## Security
+
+- **HTTP headers** (`next.config.mjs`): `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`, `X-DNS-Prefetch-Control`, plus `Strict-Transport-Security` (HSTS) and a `Content-Security-Policy-Report-Only` policy. CSP runs in **Report-Only** mode for now (Sanity Studio + Framer Motion need `'unsafe-inline'`/`'unsafe-eval'`) — watch the browser console for violations on the public routes, then promote it to an enforced `Content-Security-Policy`.
+- **`/studio`** is served with `X-Robots-Tag: noindex, nofollow`; write access is gated by Sanity authentication (project members only).
+- **CMS link safety**: `lib/url.ts` `isHttpUrl()` guards any CMS-supplied `liveUrl` to be `http(s)` before it's used as an `href`, so a `javascript:` value can't execute.
+- **Secrets**: public Sanity reads need no token, so nothing sensitive ships in the client bundle. Don't commit `.env*` (gitignored). When you add a contact-form backend, keep the email-provider key server-only and add input validation + rate limiting.
+
+> A more detailed internal audit lives in `SECURITY_AUDIT.md` (gitignored — not published to this public repo).
 
 ## Colour Tokens (Dark Theme)
 

@@ -3,6 +3,7 @@
 import Image from 'next/image';
 import { motion } from 'framer-motion';
 import type { Project } from '@/types';
+import { isHttpUrl } from '@/lib/url';
 
 interface PortfolioSectionProps {
   scrollPanelRef?: React.RefObject<HTMLDivElement | null>;
@@ -41,6 +42,8 @@ export default function PortfolioSection({ scrollPanelRef, projects }: Portfolio
 }
 
 function ProjectCard({ project, index }: { project: Project; index: number }) {
+  const liveUrl = isHttpUrl(project.liveUrl) ? project.liveUrl : undefined;
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 32 }}
@@ -94,9 +97,9 @@ function ProjectCard({ project, index }: { project: Project; index: number }) {
           ))}
         </div>
         <a
-          href={project.liveUrl ?? '#'}
-          target={project.liveUrl ? '_blank' : undefined}
-          rel={project.liveUrl ? 'noopener noreferrer' : undefined}
+          href={liveUrl ?? '#'}
+          target={liveUrl ? '_blank' : undefined}
+          rel={liveUrl ? 'noopener noreferrer' : undefined}
           className="inline-flex items-center gap-1.5 rounded-full border border-accent-500/40
                      bg-accent-500/10 px-4 py-2 text-sm font-semibold text-accent-300
                      transition-all duration-300 group-hover:border-accent-500

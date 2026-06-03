@@ -266,8 +266,9 @@ interface TeamMember {
 
 ```
 sanity.config.ts                                     # Sanity Studio schema (3 document types)
-lib/sanity.ts                                        # Sanity client config (useCdn: true, public reads)
+lib/sanity.ts                                        # Sanity client config (useCdn: false, public reads — no write token in the client bundle)
 lib/sanityFetch.ts                                   # Typed GROQ helpers: fetchProjects, fetchTestimonials, fetchTeam, fetchProjectBySlug, fetchAllSlugs
+lib/url.ts                                           # isHttpUrl() guard — validates a CMS liveUrl is http(s) before it's used as an href (anti-XSS)
 app/page.tsx                                         # Async Server Component — fetches Sanity data, renders HomePageClient
 app/studio/[[...tool]]/page.tsx                      # Embedded Sanity Studio route
 app/contact/page.tsx                                 # /contact — server page (exports metadata) → ContactClient
@@ -280,7 +281,7 @@ components/ui/PageHeader.tsx                          # Shared sticky header for
 types/index.ts                                       # Project, Testimonial, TeamMember, Service
 styles/globals.css                                   # Dark root styles, dotPulse + cursorBlink keyframes
 tailwind.config.ts                                   # Color tokens, glow shadows
-next.config.mjs                                      # cdn.sanity.io remotePattern, reactStrictMode
+next.config.mjs                                      # cdn.sanity.io remotePattern, reactStrictMode, security headers (HSTS + CSP-Report-Only + the 5 base headers; /studio → noindex)
 components/SnapScrollContainer.tsx                   # INTERNAL_SCROLL_INDICES = [3, 4]
 hooks/useSnapScroll.ts                               # internalScrollSections[] generalization
 hooks/useTypewriter.ts                               # Rotating typewriter (4-phase state machine)
@@ -397,15 +398,17 @@ No `.env.local` required for public reads — Sanity dataset is public.
 
 ---
 
-**Last Updated**: June 2026 — **Testimonials → Trust swap + standalone-route dark rebuild.** Removed the fabricated Testimonials marquee (fake names/companies) and replaced it at index 7 with `TrustSection` ("Fresh studio. Proven craft." — 3 trust cards + "Start a conversation" `goTo` CTA, no Sanity data); dropped the `testimonials` fetch/prop from `app/page.tsx` + `HomePageClient` (the `portfolioTestimonial` schema + `fetchTestimonials` helper are retained but unused). Rebuilt `/contact` (premium dark form, `mailto` + confirmation, server-page/client split) and `/work` + `/work/[slug]` (dark theme, gallery now renders real Sanity cover images, case study now renders real `description`/`tech`/`image`/`liveUrl` + `generateMetadata`). Added shared `PageHeader`; standalone routes scroll via `<main md:h-[100dvh] md:overflow-y-auto>` (the global `body { overflow:hidden }` only suits the snap-scroll homepage).  
-**Previously**: Pricing section added at index 5 (3 tier cards + Care Plan add-on, `goTo` CTA → contact; indices after Portfolio shifted +1). Process: sticky split scrollytelling + GSAP removed, word-by-word reveal, gradient/spring step numbers, nested CSS snap-scroll; Portfolio: hover lift/glow/zoom + "Visit this site" button.  
+**Last Updated**: June 2026 — **Security audit hardening.** Added `Strict-Transport-Security` (HSTS) + a `Content-Security-Policy-Report-Only` policy (scoped for Sanity Studio / Framer Motion) and `X-Robots-Tag: noindex` on `/studio` in `next.config.mjs`; added `lib/url.ts` `isHttpUrl()` to guard CMS `liveUrl` values before they reach an `href` (PortfolioSection + `/work/[slug]`); removed a stray `ADMIN_PASSWORD` from `.env.local`; ran `npm update` (in-range patches — residual advisories are transitive Sanity/Next **build-time** only, `--force` avoided). Full write-up lives in the local, gitignored `SECURITY_AUDIT.md`. Also gitignored `.claude/settings.local.json`, `blueprint/`, and the scratch `pinnaclebyte-pricing-prompt.md`.  
+**Previously**: **Testimonials → Trust swap + standalone-route dark rebuild.** Removed the fabricated Testimonials marquee (fake names/companies) and replaced it at index 7 with `TrustSection` ("Fresh studio. Proven craft." — 3 trust cards + "Start a conversation" `goTo` CTA, no Sanity data); dropped the `testimonials` fetch/prop from `app/page.tsx` + `HomePageClient` (the `portfolioTestimonial` schema + `fetchTestimonials` helper are retained but unused). Rebuilt `/contact` (premium dark form, `mailto` + confirmation, server-page/client split) and `/work` + `/work/[slug]` (dark theme, gallery now renders real Sanity cover images, case study now renders real `description`/`tech`/`image`/`liveUrl` + `generateMetadata`). Added shared `PageHeader`; standalone routes scroll via `<main md:h-[100dvh] md:overflow-y-auto>` (the global `body { overflow:hidden }` only suits the snap-scroll homepage).  
+**Earlier**: Pricing section added at index 5 (3 tier cards + Care Plan add-on, `goTo` CTA → contact; indices after Portfolio shifted +1). Process: sticky split scrollytelling + GSAP removed, word-by-word reveal, gradient/spring step numbers, nested CSS snap-scroll; Portfolio: hover lift/glow/zoom + "Visit this site" button.  
 **Dark Theme (Navy + Electric Blue)**: ✅  
 **Animated Backgrounds**: ✅ (dot grid, aurora blobs, network canvas)  
 **Full-Page Snap Scroll**: ✅ (sections 3 & 4 internally scrollable via `internalScrollSections[]`)  
 **Portfolio Section**: ✅ (3-col card grid, Sanity data)  
 **Content Management**: ✅ (Sanity Studio at `/studio`, changes live within ~60s of publishing)  
 **ISR**: ✅ (`useCdn: false` + `next: { revalidate: 60 }` on all fetch calls)  
-**Security Headers**: ✅ (X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy — grade A on securityheaders.com)  
+**Security Headers**: ✅ (base 5: X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy, X-DNS-Prefetch-Control — grade A on securityheaders.com — **plus** `Strict-Transport-Security` (HSTS) and `Content-Security-Policy-Report-Only`; `/studio` also gets `X-Robots-Tag: noindex, nofollow`. CSP is Report-Only for now because Sanity Studio + Framer Motion need `'unsafe-inline'`/`'unsafe-eval'`; promote to enforced after observing console reports)  
+**CMS URL Guard**: ✅ (`lib/url.ts` `isHttpUrl()` validates a CMS `liveUrl` is http(s) before it's used as an `href`, in `PortfolioSection` + `/work/[slug]` — blocks `javascript:` hrefs)  
 **Honest Trust Section**: ✅ (fabricated testimonials removed; transparent "Fresh studio. Proven craft." trust-builder in their place)  
 **Standalone Routes**: ✅ (`/contact`, `/work`, `/work/[slug]` on the dark theme + wired to Sanity)  
 **Next Task**: Swap the contact form `mailto:` for a server action + email (Resend / Nodemailer)
